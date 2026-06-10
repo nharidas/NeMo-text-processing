@@ -54,7 +54,7 @@ class CardinalFst(GraphFst):
         self.single_digits_graph = single_digit_graph + pynini.closure(insert_space + single_digit_graph)
 
         def create_graph_suffix(digit_graph, suffix, zeros_counts):
-            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO), -0.1)
+            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO | pynini.accep("౦")), -0.1)
             if zeros_counts == 0:
                 return digit_graph + suffix
 
@@ -62,7 +62,7 @@ class CardinalFst(GraphFst):
 
         def create_larger_number_graph(digit_graph, suffix, zeros_counts, sub_graph):
             insert_space = pynutil.insert(" ")
-            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO), -0.1)
+            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO | pynini.accep("౦")), -0.1)
             if zeros_counts == 0:
                 return digit_graph + suffix + insert_space + sub_graph
 
@@ -72,20 +72,11 @@ class CardinalFst(GraphFst):
 
         suffix_hundreds = pynutil.insert(" వంద")
 
-        digit_except_one = (
-            pynini.cross("2", "రెండు")
-            | pynini.cross("3", "మూడు")
-            | pynini.cross("4", "నాలుగు")
-            | pynini.cross("5", "ఐదు")
-            | pynini.cross("6", "ఆరు")
-            | pynini.cross("7", "ఏడు")
-            | pynini.cross("8", "ఎనిమిది")
-            | pynini.cross("9", "తొమ్మిది")
-        ).optimize()
+        digit_except_one = (pynini.union("2", "3", "4", "5", "6", "7", "8", "9","౨", "౩", "౪", "౫", "౬", "౭", "౮", "౯")@ digit).optimize()
 
-        graph_hundreds = pynini.cross("100", "వంద")
-        graph_hundreds |= pynini.cross("10", "నూట ") + digit
-        graph_hundreds |= pynini.cross("1", "నూట ") + teens_ties
+        graph_hundreds = pynini.cross("100", "వంద") | pynini.cross("౧౦౦", "వంద")
+        graph_hundreds |= (pynini.cross("10", "నూట ") | pynini.cross("౧౦", "నూట ")) + digit
+        graph_hundreds |= (pynini.cross("1", "నూట ") | pynini.cross("౧", "నూట ")) + teens_ties
 
         graph_hundreds |= create_graph_suffix(digit_except_one, pynutil.insert(" వందలు"), 2)
         graph_hundreds |= create_larger_number_graph(digit_except_one, pynutil.insert(" వందల"), 1, digit)
