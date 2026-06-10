@@ -12,55 +12,365 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pynini 
-from pynini.lib import pynutil 
- 
-from nemo_text_processing.text_normalization.te.graph_utils import GraphFst 
-from nemo_text_processing.text_normalization.te.utils import get_abs_path 
- 
- 
-class CardinalFst(GraphFst): 
-    """ 
-    Classifies cardinal numbers, e.g.  5  ->  cardinal { integer: "ఐదు" } 
-    For compound numbers (21-99), it handles the pattern:  <tens> <units>, e.g.  42 ->  cardinal { integer: "నలభై రెండు" }
-    For telugu digits, it uses the following mapping: e.g. ౧ -> cardinal { integer: "ఒకటి" }
-    including telugu numerals
-    """ 
- 
-    def __init__(self, deterministic: bool = True): 
-        super().__init__(name="cardinal", kind="classify", deterministic=deterministic) 
- 
-        # Load the three data files as transducers  (number -> word) 
-        digit = pynini.string_file(get_abs_path("data/numbers/digit.tsv")) 
-        zero = pynini.string_file(get_abs_path("data/numbers/zero.tsv")) 
-        teens_and_ties = pynini.string_file(get_abs_path("data/numbers/teens_and_ties.tsv"))
-        tens = pynini.string_file(get_abs_path("data/numbers/tens.tsv"))
+import pynini
+from pynini.lib import pynutil
 
-        # Predefined numbers (0-9, 10, 11 - 19, 20, 30, 40, 50, 60, 70, 80, 90)
-        predefined = digit | zero | teens_and_ties
+from nemo_text_processing.text_normalization.te.graph_utils import (
+    NEMO_ALL_DIGIT,
+    NEMO_ALL_ZERO,
+    GraphFst,
+    insert_space,
+)
+from nemo_text_processing.text_normalization.te.utils import get_abs_path
 
-        # Two-digit compound (21-29, 31-39,...91-99)
-        # For tens digit
-        first_digit = pynini.union("2", "3", "4", "5", "6", "7", "8", "9", "౨", "౩", "౪", "౫", "౬", "౭", "౮", "౯")
-    
-        # Convert the tens value to tens word using teens_and_ties 
-        tens_words = first_digit @ tens
 
-        # For units digit
-        unit_digit = pynini.union("1", "2", "3", "4", "5", "6", "7", "8", "9", "౧", "౨", "౩", "౪", "౫", "౬", "౭", "౮", "౯")
+class CardinalFst(GraphFst):
+    """
+    Finite state transducer for classifying cardinals, e.g.
+        -౨౩ -> cardinal { negative: "true"  integer: "ఇరవై మూడు" }
 
-        # Convert the unit digit to unit word using predefined
-        unit_words = unit_digit @ predefined
+    Args:
+        deterministic: if True will provide a single transduction option,
+            for False multiple transduction are generated (used for audio-based normalization)
+    """
 
-        # Compound pattern - tens_words + " " + unit_words
-        compound = tens_words + pynutil.insert(" ") + unit_words
-        
-        graph = predefined | compound
-        graph = graph.optimize()
+    def __init__(self, deterministic: bool = True, lm: bool = False):
+        super().__init__(name="cardinal", kind="classify", deterministic=deterministic)
 
-        # Wrap in token field
-        final_graph = pynutil.insert('integer: "') + graph + pynutil.insert('"')
- 
-        # add_tokens() turns it into:   cardinal { integer: "<word>" } 
-        final_graph = self.add_tokens(final_graph) 
-        self.fst = final_graph.optimize() 
+        digit = pynini.string_file(get_abs_path("data/numbers/digit.tsv"))
+        zero = pynini.string_file(get_abs_path("data/numbers/zero.tsv"))
+        teens_ties_hi = pynini.string_file(get_abs_path("data/numbers/teens_and_ties.tsv"))
+        teens_ties_en = pynini.string_file(get_abs_path("data/numbers/teens_and_ties_en.tsv"))
+        teens_ties = pynini.union(teens_ties_hi, teens_ties_en)
+        teens_and_ties = pynutil.add_weight(teens_ties, -0.1)
+
+        self.digit = digit
+        self.zero = zero
+        self.teens_and_ties = teens_and_ties
+
+        # Single digit graph for digit-by-digit reading
+        # e.g., "०७३" -> "शून्य सात तीन"
+        single_digit_graph = digit | zero
+        self.single_digits_graph = single_digit_graph + pynini.closure(insert_space + single_digit_graph)
+
+        def create_graph_suffix(digit_graph, suffix, zeros_counts):
+            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO), -0.1)
+            if zeros_counts == 0:
+                return digit_graph + suffix
+
+            return digit_graph + (zero**zeros_counts) + suffix
+
+        def create_larger_number_graph(digit_graph, suffix, zeros_counts, sub_graph):
+            insert_space = pynutil.insert(" ")
+            zero = pynutil.add_weight(pynutil.delete(NEMO_ALL_ZERO), -0.1)
+            if zeros_counts == 0:
+                return digit_graph + suffix + insert_space + sub_graph
+
+            return digit_graph + suffix + (zero**zeros_counts) + insert_space + sub_graph
+
+        # Hundred graph
+
+        suffix_hundreds = pynutil.insert(" వంద")
+
+        digit_except_one = (
+            pynini.cross("2", "రెండు")
+            | pynini.cross("3", "మూడు")
+            | pynini.cross("4", "నాలుగు")
+            | pynini.cross("5", "ఐదు")
+            | pynini.cross("6", "ఆరు")
+            | pynini.cross("7", "ఏడు")
+            | pynini.cross("8", "ఎనిమిది")
+            | pynini.cross("9", "తొమ్మిది")
+        ).optimize()
+
+        graph_hundreds = pynini.cross("100", "వంద")
+        graph_hundreds |= pynini.cross("10", "నూట ") + digit
+        graph_hundreds |= pynini.cross("1", "నూట ") + teens_ties
+
+        graph_hundreds |= create_graph_suffix(digit_except_one, pynutil.insert(" వందలు"), 2)
+        graph_hundreds |= create_larger_number_graph(digit_except_one, pynutil.insert(" వందల"), 1, digit)
+        graph_hundreds |= create_larger_number_graph(digit_except_one, pynutil.insert(" వందల"), 0, teens_ties)
+
+        graph_hundreds = graph_hundreds.optimize()
+        self.graph_hundreds = graph_hundreds
+
+        # Transducer for eleven hundred -> 1100 or twenty one hundred eleven -> 2111
+        graph_hundreds_as_thousand = create_graph_suffix(teens_and_ties, suffix_hundreds, 2)
+        graph_hundreds_as_thousand |= create_larger_number_graph(teens_and_ties, suffix_hundreds, 1, digit)
+        graph_hundreds_as_thousand |= create_larger_number_graph(teens_and_ties, suffix_hundreds, 0, teens_ties)
+        self.graph_hundreds_as_thousand = graph_hundreds_as_thousand
+
+        # Thousands and Ten thousands graph
+        suffix_thousands = pynutil.insert(" వెయ్యి")
+        graph_thousands = create_graph_suffix(digit, suffix_thousands, 3)
+        graph_thousands |= create_larger_number_graph(digit, suffix_thousands, 2, digit)
+        graph_thousands |= create_larger_number_graph(digit, suffix_thousands, 1, teens_ties)
+        graph_thousands |= create_larger_number_graph(digit, suffix_thousands, 0, graph_hundreds)
+        graph_thousands.optimize()
+        self.graph_thousands = graph_thousands
+
+        graph_ten_thousands = create_graph_suffix(teens_and_ties, suffix_thousands, 3)
+        graph_ten_thousands |= create_larger_number_graph(teens_and_ties, suffix_thousands, 2, digit)
+        graph_ten_thousands |= create_larger_number_graph(teens_and_ties, suffix_thousands, 1, teens_ties)
+        graph_ten_thousands |= create_larger_number_graph(teens_and_ties, suffix_thousands, 0, graph_hundreds)
+        graph_ten_thousands.optimize()
+        self.graph_ten_thousands = graph_ten_thousands
+
+        # Lakhs graph and ten lakhs graph
+        suffix_lakhs = pynutil.insert(" లక్ష")
+        graph_lakhs = create_graph_suffix(digit, suffix_lakhs, 5)
+        graph_lakhs |= create_larger_number_graph(digit, suffix_lakhs, 4, digit)
+        graph_lakhs |= create_larger_number_graph(digit, suffix_lakhs, 3, teens_ties)
+        graph_lakhs |= create_larger_number_graph(digit, suffix_lakhs, 2, graph_hundreds)
+        graph_lakhs |= create_larger_number_graph(digit, suffix_lakhs, 1, graph_thousands)
+        graph_lakhs |= create_larger_number_graph(digit, suffix_lakhs, 0, graph_ten_thousands)
+        graph_lakhs.optimize()
+        self.graph_lakhs = graph_lakhs
+
+        graph_ten_lakhs = create_graph_suffix(teens_and_ties, suffix_lakhs, 5)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_lakhs, 4, digit)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_lakhs, 3, teens_ties)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_lakhs, 2, graph_hundreds)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_lakhs, 1, graph_thousands)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_lakhs, 0, graph_ten_thousands)
+        graph_ten_lakhs.optimize()
+        self.graph_ten_lakhs = graph_ten_lakhs
+
+        # Crores graph ten crores graph
+        suffix_crores = pynutil.insert(" కోటి")
+        graph_crores = create_graph_suffix(digit, suffix_crores, 7)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 6, digit)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 5, teens_ties)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 4, graph_hundreds)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 3, graph_thousands)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 2, graph_ten_thousands)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 1, graph_lakhs)
+        graph_crores |= create_larger_number_graph(digit, suffix_crores, 0, graph_ten_lakhs)
+        graph_crores.optimize()
+
+        graph_ten_crores = create_graph_suffix(teens_and_ties, suffix_crores, 7)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 6, digit)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 5, teens_ties)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 4, graph_hundreds)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 3, graph_thousands)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 2, graph_ten_thousands)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 1, graph_lakhs)
+        graph_ten_crores |= create_larger_number_graph(teens_and_ties, suffix_crores, 0, graph_ten_lakhs)
+        graph_ten_crores.optimize()
+
+        # Arabs graph and ten arabs graph
+        suffix_arabs = pynutil.insert(" అరబ్")
+        graph_arabs = create_graph_suffix(digit, suffix_arabs, 9)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 8, digit)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 7, teens_ties)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 6, graph_hundreds)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 5, graph_thousands)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 4, graph_ten_thousands)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 3, graph_lakhs)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 2, graph_ten_lakhs)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 1, graph_crores)
+        graph_arabs |= create_larger_number_graph(digit, suffix_arabs, 0, graph_ten_crores)
+        graph_arabs.optimize()
+
+        graph_ten_arabs = create_graph_suffix(teens_and_ties, suffix_arabs, 9)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 8, digit)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 7, teens_ties)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 6, graph_hundreds)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 5, graph_thousands)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 4, graph_ten_thousands)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 3, graph_lakhs)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 2, graph_ten_lakhs)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 1, graph_crores)
+        graph_ten_arabs |= create_larger_number_graph(teens_and_ties, suffix_arabs, 0, graph_ten_crores)
+        graph_ten_arabs.optimize()
+
+        # Kharabs graph and ten kharabs graph
+        suffix_kharabs = pynutil.insert(" ఖరబ్")
+        graph_kharabs = create_graph_suffix(digit, suffix_kharabs, 11)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 10, digit)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 9, teens_ties)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 8, graph_hundreds)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 7, graph_thousands)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 6, graph_ten_thousands)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 5, graph_lakhs)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 4, graph_ten_lakhs)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 3, graph_crores)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 2, graph_ten_crores)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 1, graph_arabs)
+        graph_kharabs |= create_larger_number_graph(digit, suffix_kharabs, 0, graph_ten_arabs)
+        graph_kharabs.optimize()
+
+        graph_ten_kharabs = create_graph_suffix(teens_and_ties, suffix_kharabs, 11)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 10, digit)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 9, teens_ties)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 8, graph_hundreds)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 7, graph_thousands)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 6, graph_ten_thousands)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 5, graph_lakhs)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 4, graph_ten_lakhs)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 3, graph_crores)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 2, graph_ten_crores)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 1, graph_arabs)
+        graph_ten_kharabs |= create_larger_number_graph(teens_and_ties, suffix_kharabs, 0, graph_ten_arabs)
+        graph_ten_kharabs.optimize()
+
+        # Nils graph and ten nils graph
+        suffix_nils = pynutil.insert(" నీల్")
+        graph_nils = create_graph_suffix(digit, suffix_nils, 13)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 12, digit)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 11, teens_ties)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 10, graph_hundreds)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 9, graph_thousands)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 8, graph_ten_thousands)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 7, graph_lakhs)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 6, graph_ten_lakhs)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 5, graph_crores)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 4, graph_ten_crores)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 3, graph_arabs)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 2, graph_ten_arabs)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 1, graph_kharabs)
+        graph_nils |= create_larger_number_graph(digit, suffix_nils, 0, graph_ten_kharabs)
+        graph_nils.optimize()
+
+        graph_ten_nils = create_graph_suffix(teens_and_ties, suffix_nils, 13)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 12, digit)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 11, teens_ties)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 10, graph_hundreds)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 9, graph_thousands)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 8, graph_ten_thousands)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 7, graph_lakhs)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 6, graph_ten_lakhs)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 5, graph_crores)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 4, graph_ten_crores)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 3, graph_arabs)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 2, graph_ten_arabs)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 1, graph_kharabs)
+        graph_ten_nils |= create_larger_number_graph(teens_and_ties, suffix_nils, 0, graph_ten_kharabs)
+        graph_ten_nils.optimize()
+
+        # Padmas graph and ten padmas graph
+        suffix_padmas = pynutil.insert(" పద్మ")
+        graph_padmas = create_graph_suffix(digit, suffix_padmas, 15)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 14, digit)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 13, teens_ties)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 12, graph_hundreds)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 11, graph_thousands)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 10, graph_ten_thousands)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 9, graph_lakhs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 8, graph_ten_lakhs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 7, graph_crores)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 6, graph_ten_crores)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 5, graph_arabs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 4, graph_ten_arabs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 3, graph_kharabs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 2, graph_ten_kharabs)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 1, graph_nils)
+        graph_padmas |= create_larger_number_graph(digit, suffix_padmas, 0, graph_ten_nils)
+        graph_padmas.optimize()
+
+        graph_ten_padmas = create_graph_suffix(teens_and_ties, suffix_padmas, 15)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 14, digit)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 13, teens_ties)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 12, graph_hundreds)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 11, graph_thousands)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 10, graph_ten_thousands)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 9, graph_lakhs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 8, graph_ten_lakhs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 7, graph_crores)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 6, graph_ten_crores)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 5, graph_arabs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 4, graph_ten_arabs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 3, graph_kharabs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 2, graph_ten_kharabs)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 1, graph_nils)
+        graph_ten_padmas |= create_larger_number_graph(teens_and_ties, suffix_padmas, 0, graph_ten_nils)
+        graph_ten_padmas.optimize()
+
+        # Shankhs graph and ten shankhs graph
+        suffix_shankhs = pynutil.insert(" పద్మ")
+        graph_shankhs = create_graph_suffix(digit, suffix_shankhs, 17)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 16, digit)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 15, teens_ties)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 14, graph_hundreds)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 13, graph_thousands)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 12, graph_ten_thousands)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 11, graph_lakhs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 10, graph_ten_lakhs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 9, graph_crores)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 8, graph_ten_crores)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 7, graph_arabs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 6, graph_ten_arabs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 5, graph_kharabs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 4, graph_ten_kharabs)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 3, graph_nils)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 2, graph_ten_nils)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 1, graph_padmas)
+        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 0, graph_ten_padmas)
+        graph_shankhs.optimize()
+
+        graph_ten_shankhs = create_graph_suffix(teens_and_ties, suffix_shankhs, 17)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 16, digit)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 15, teens_ties)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 14, graph_hundreds)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 13, graph_thousands)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 12, graph_ten_thousands)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 11, graph_lakhs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 10, graph_ten_lakhs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 9, graph_crores)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 8, graph_ten_crores)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 7, graph_arabs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 6, graph_ten_arabs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 5, graph_kharabs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 4, graph_ten_kharabs)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 3, graph_nils)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 2, graph_ten_nils)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 1, graph_padmas)
+        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 0, graph_ten_padmas)
+        graph_ten_shankhs.optimize()
+
+        # Only match exactly 2 digits to avoid interfering with telephone numbers, decimals, etc.
+        # e.g., "०५" -> "शून्य पाँच"
+        single_digit = digit | zero
+        graph_leading_zero = zero + insert_space + single_digit
+        graph_leading_zero = pynutil.add_weight(graph_leading_zero, 0.5)
+
+        graph_without_leading_zeros = (
+            digit
+            | zero
+            | teens_and_ties
+            | graph_hundreds
+            | graph_thousands
+            | graph_ten_thousands
+            | graph_lakhs
+            | graph_ten_lakhs
+            | graph_crores
+            | graph_ten_crores
+            | graph_arabs
+            | graph_ten_arabs
+            | graph_kharabs
+            | graph_ten_kharabs
+            | graph_nils
+            | graph_ten_nils
+            | graph_padmas
+            | graph_ten_padmas
+            | graph_shankhs
+            | graph_ten_shankhs
+        )
+        self.graph_without_leading_zeros = graph_without_leading_zeros.optimize()
+
+        # Handle numbers with leading zeros by reading digit-by-digit
+        # e.g., English/arabic "073" -> "शून्य सात तीन", Hindi/devnagri "००५" -> "शून्य शून्य पाँच"
+        cardinal_with_leading_zeros = pynini.compose(
+            NEMO_ALL_ZERO + pynini.closure(NEMO_ALL_DIGIT), self.single_digits_graph
+        )
+        cardinal_with_leading_zeros = pynutil.add_weight(cardinal_with_leading_zeros, 0.5)
+
+        # Full graph including leading zeros - for standalone cardinal matching
+        final_graph = graph_without_leading_zeros | cardinal_with_leading_zeros
+
+        optional_minus_graph = pynini.closure(pynutil.insert("negative: ") + pynini.cross("-", "\"true\" "), 0, 1)
+
+        self.final_graph = final_graph.optimize()
+        final_graph = optional_minus_graph + pynutil.insert("integer: \"") + self.final_graph + pynutil.insert("\"")
+        final_graph = self.add_tokens(final_graph)
+        self.fst = final_graph
