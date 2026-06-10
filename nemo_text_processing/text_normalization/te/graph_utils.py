@@ -27,26 +27,29 @@ from pynini.lib import byte, pynutil, utf8
 NEMO_CHAR = utf8.VALID_UTF8_CHAR
 NEMO_DIGIT = byte.DIGIT
 
-NEMO_HI_DIGIT = pynini.union("०", "१", "२", "३", "४", "५", "६", "७", "८", "९").optimize()
-NEMO_HI_NON_ZERO = pynini.union("१", "२", "३", "४", "५", "६", "७", "८", "९").optimize()
-NEMO_HI_ZERO = "०"
-# Combined Hindi and Arabic digits for graphs that need to accept both
-NEMO_ALL_DIGIT = pynini.union(NEMO_HI_DIGIT, NEMO_DIGIT).optimize()
-NEMO_ALL_ZERO = pynini.union("०", "0").optimize()
-NEMO_ALL_NON_ZERO = pynini.union(NEMO_HI_NON_ZERO, "1", "2", "3", "4", "5", "6", "7", "8", "9").optimize()
+# Telugu native digits (౦, ౧, ౨, ౩, ౪, ౫, ౬, ౭, ౮, ౯)
+NEMO_TE_DIGIT = pynini.union("౦", "౧", "౨", "౩", "౪", "౫", "౬", "౭", "౮", "౯").optimize()
+NEMO_TE_NON_ZERO = pynini.union("౧", "౨", "౩", "౪", "౫", "౬", "౭", "౮", "౯").optimize()
+NEMO_TE_ZERO = "౦"
 
-HI_DEDH = "डेढ़"  # 1.5
-HI_DHAI = "ढाई"  # 2.5
-HI_SAVVA = "सवा"  # quarter more (1.25)
-HI_SADHE = "साढ़े"  # half more (X.5)
-HI_PAUNE = "पौने"  # quarter less (0.75)
+# Combined Telugu and Arabic digits for graphs that need to accept both
+NEMO_ALL_DIGIT = pynini.union(NEMO_TE_DIGIT, NEMO_DIGIT).optimize()
+NEMO_ALL_ZERO = pynini.union("౦", "0").optimize()
+NEMO_ALL_NON_ZERO = pynini.union(NEMO_TE_NON_ZERO, "1", "2", "3", "4", "5", "6", "7", "8", "9").optimize()
 
-# Hindi decimal representations
-HI_POINT_FIVE = ".५"  # .5
-HI_ONE_POINT_FIVE = "१.५"  # 1.5
-HI_TWO_POINT_FIVE = "२.५"  # 2.5
-HI_DECIMAL_25 = ".२५"  # .25
-HI_DECIMAL_75 = ".७५"  # .75
+# Telugu fractional terms
+TE_DEDH = "ఒకటిన్నర"  # 1.5 (one and a half)
+TE_DHAI = "రెండున్నర"  # 2.5 (two and a half)
+TE_SAVVA = "సవా"  # quarter more (Borrowed/used in contexts like 'sava muna' or 'sava poddu')
+TE_SADHE = "న్నర"  # half more (suffix used like మూడున్నర - 3.5)
+TE_PAUNE = "పావుతక్కువ"  # quarter less (e.g., પાઉં કમ / quarter to)
+
+# Telugu native decimal representations
+TE_POINT_FIVE = ".౫"  # .5
+TE_ONE_POINT_FIVE = "౧.౫"  # 1.5
+TE_TWO_POINT_FIVE = "౨.౫"  # 2.5
+TE_DECIMAL_25 = ".౨౫"  # .25
+TE_DECIMAL_75 = ".౭౫"  # .75
 
 # Arabic/English decimal representations
 EN_POINT_FIVE = ".5"
@@ -55,15 +58,15 @@ EN_TWO_POINT_FIVE = "2.5"
 EN_DECIMAL_25 = ".25"
 EN_DECIMAL_75 = ".75"
 
-# Combined Hindi and English decimal patterns
-POINT_FIVE = pynini.union(HI_POINT_FIVE, EN_POINT_FIVE).optimize()
-ONE_POINT_FIVE = pynini.union(HI_ONE_POINT_FIVE, EN_ONE_POINT_FIVE).optimize()
-TWO_POINT_FIVE = pynini.union(HI_TWO_POINT_FIVE, EN_TWO_POINT_FIVE).optimize()
-DECIMAL_25 = pynini.union(HI_DECIMAL_25, EN_DECIMAL_25).optimize()
-DECIMAL_75 = pynini.union(HI_DECIMAL_75, EN_DECIMAL_75).optimize()
+# Combined Telugu and English decimal patterns
+POINT_FIVE = pynini.union(TE_POINT_FIVE, EN_POINT_FIVE).optimize()
+ONE_POINT_FIVE = pynini.union(TE_ONE_POINT_FIVE, EN_ONE_POINT_FIVE).optimize()
+TWO_POINT_FIVE = pynini.union(TE_TWO_POINT_FIVE, EN_TWO_POINT_FIVE).optimize()
+DECIMAL_25 = pynini.union(TE_DECIMAL_25, EN_DECIMAL_25).optimize()
+DECIMAL_75 = pynini.union(TE_DECIMAL_75, EN_DECIMAL_75).optimize()
 
 # Symbol constants
-HI_BY = "बाई"
+TE_BY = "బై" # Transliterated 'by' for fractions/ratios (e.g., 2/3 -> రెండు బై మూడు)
 LOWERCASE_X = "x"
 UPPERCASE_X = "X"
 ASTERISK = "*"
@@ -71,7 +74,7 @@ HYPHEN = "-"
 SLASH = "/"
 COMMA = ","
 PERIOD = "."
-HI_PERIOD = "।"
+TE_PERIOD = "."  # Telugu text uses standard Western periods
 
 NEMO_LOWER = pynini.union(*string.ascii_lowercase).optimize()
 NEMO_UPPER = pynini.union(*string.ascii_uppercase).optimize()
@@ -86,7 +89,6 @@ TO_LOWER = pynini.union(*[pynini.cross(x, y) for x, y in zip(string.ascii_upperc
 TO_UPPER = pynini.invert(TO_LOWER)
 NEMO_SIGMA = pynini.closure(NEMO_CHAR)
 
-
 delete_space = pynutil.delete(pynini.closure(NEMO_WHITE_SPACE))
 delete_zero_or_one_space = pynutil.delete(pynini.closure(NEMO_WHITE_SPACE, 0, 1))
 insert_space = pynutil.insert(" ")
@@ -96,12 +98,11 @@ delete_preserve_order = pynini.closure(
     | (pynutil.delete(" field_order: \"") + NEMO_NOT_QUOTE + pynutil.delete("\""))
 )
 
-
 MIN_NEG_WEIGHT = -0.0001
 MIN_POS_WEIGHT = 0.0001
 INPUT_CASED = "cased"
 INPUT_LOWER_CASED = "lower_cased"
-MINUS = pynini.union(" ऋणात्मक ", " ऋणात्मक ").optimize()
+MINUS = pynini.union(" మైనస్ ", " ఋణ ").optimize() # 'మైనస్' (Minus) is highly preferred in modern ITN
 
 
 def capitalized_input_graph(
@@ -109,7 +110,6 @@ def capitalized_input_graph(
 ) -> 'pynini.FstLike':
     """
     Allow graph input to be capitalized, e.g. for ITN)
-
     Args:
         graph: FstGraph
         original_graph_weight: weight to add to the original `graph`

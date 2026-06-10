@@ -1,4 +1,4 @@
-# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2026, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -166,6 +166,14 @@ class Normalizer:
 
             if post_process:
                 self.post_processor = PostProcessingFst(cache_dir=cache_dir, overwrite_cache=overwrite_cache)
+        elif lang == 'te':
+            from nemo_text_processing.text_normalization.te.taggers.tokenize_and_classify import ClassifyFst
+            from nemo_text_processing.text_normalization.te.verbalizers.post_processing import PostProcessingFst
+            from nemo_text_processing.text_normalization.te.verbalizers.verbalize_final import VerbalizeFinalFst
+
+            if post_process:
+                self.post_processor = PostProcessingFst(cache_dir=cache_dir, overwrite_cache=overwrite_cache)
+            
         elif lang == 'it':
             from nemo_text_processing.text_normalization.it.taggers.tokenize_and_classify import ClassifyFst
             from nemo_text_processing.text_normalization.it.verbalizers.verbalize_final import VerbalizeFinalFst
@@ -391,7 +399,7 @@ class Normalizer:
                 return text
         output = SPACE_DUP.sub(' ', output[1:])
 
-        if self.lang in ["en", "hi", "vi"] and hasattr(self, 'post_processor') and self.post_processor is not None:
+        if self.lang in ["en", "hi", "te", "vi"] and hasattr(self, 'post_processor') and self.post_processor is not None:
             output = self.post_process(output)
 
         if punct_post_process:
@@ -737,7 +745,7 @@ def parse_args():
     parser.add_argument(
         "--language",
         help="language",
-        choices=["en", "de", "es", "fr", "hu", "sv", "zh", "ar", "it", "hy", "ja", "hi", "ko", "vi", "pt"],
+        choices=["en", "de", "es", "fr", "hu", "sv", "zh", "ar", "it", "hy", "ja", "hi", "te", "ko", "vi", "pt"],
         default="en",
         type=str,
     )
