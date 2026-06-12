@@ -339,6 +339,59 @@ class CardinalFst(GraphFst):
         graph_kharabs = pynutil.add_weight(graph_kharabs, -1.2,).optimize()
         graph_ten_kharabs = graph_kharabs
 
+        # Ten Kharabs graph as lakh-crores
+        # 1000000000000 -> లక్ష కోట్లు
+        # 2000000000000 -> రెండు లక్షల కోట్లు
+        # 21000000000000 -> ఇరవై ఒక లక్ష కోట్లు
+
+        suffix_lakh_crores_plural = pynutil.insert(" కోట్లు")
+
+        lakh_crore_prefix = (
+            # 100000 crores -> లక్ష
+            pynini.cross("100000", "లక్ష")
+            | pynini.cross("౧౦౦౦౦౦", "లక్ష")
+            # లక్ష + remainder
+            | create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 4, digit,)
+            | create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 3, teens_ties,)
+            | create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 2, graph_hundreds,)
+            | create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 1, graph_thousands,)
+            | create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 0, ten_thousand_crore_prefix,)
+            # రెండు లక్షల ...
+            | create_graph_suffix(digit_except_one, pynutil.insert(" లక్షల"), 5,)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" లక్షల"), 4, digit,)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" లక్షల"), 3, teens_ties,)
+            | create_larger_number_graph( digit_except_one, pynutil.insert(" లక్షల"), 2, graph_hundreds,)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" లక్షల"), 1,graph_thousands,)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" లక్షల"), 0, ten_thousand_crore_prefix,)
+        ).optimize()
+
+        ten_lakh_crore_prefix = (
+            create_graph_suffix(teens_ties_thousand, pynutil.insert(" లక్ష"), 5,)# 21 lakh crores -> ఇరవై ఒక లక్ష
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" లక్షల"), 4, digit,)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" లక్షల"), 3, teens_ties,)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" లక్షల"), 2, graph_hundreds,)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" లక్షల"), 1, graph_thousands,)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" లక్షల"), 0, ten_thousand_crore_prefix,)
+            # 10 lakh crores, 22 lakh crores ...
+            | create_graph_suffix(teens_and_ties, pynutil.insert(" లక్షల"), 5,)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" లక్షల"), 4, digit,)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" లక్షల"), 3, teens_ties,)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" లక్షల"), 2, graph_hundreds,)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" లక్షల"), 1, graph_thousands,)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" లక్షల"), 0, ten_thousand_crore_prefix,)
+        ).optimize()
+
+        lakh_crore_count_prefix = (lakh_crore_prefix | ten_lakh_crore_prefix).optimize()
+        graph_ten_kharabs = create_graph_suffix(lakh_crore_count_prefix, suffix_lakh_crores_plural, 7,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 6, digit,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 5, teens_ties,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 4, graph_hundreds,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 3, graph_thousands,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 2, graph_ten_thousands,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 1, graph_lakhs,)
+        graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 0, graph_ten_lakhs,)
+
+        graph_ten_kharabs = pynutil.add_weight(graph_ten_kharabs, -1.4,).optimize()
 
         # Nils graph and ten nils graph
         suffix_nils = pynutil.insert(" నీల్")
