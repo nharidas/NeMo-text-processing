@@ -392,9 +392,7 @@ class CardinalFst(GraphFst):
         graph_ten_kharabs |= create_larger_number_graph(lakh_crore_count_prefix, suffix_lakh_crores_plural, 0, graph_ten_lakhs,)
 
         graph_ten_kharabs = pynutil.add_weight(graph_ten_kharabs, -1.4,).optimize()
-
-        
-        
+      
         # Nils graph as lakh-crores
         # 10000000000000 -> పది లక్షల కోట్లు
         # 21000000000000 -> ఇరవై ఒక లక్ష కోట్లు
@@ -531,48 +529,38 @@ class CardinalFst(GraphFst):
 
         graph_ten_padmas = pynutil.add_weight(graph_ten_padmas, -4.5,).optimize()
 
-        # Shankhs graph and ten shankhs graph
-        suffix_shankhs = pynutil.insert(" పద్మ")
-        graph_shankhs = create_graph_suffix(digit, suffix_shankhs, 17)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 16, digit)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 15, teens_ties)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 14, graph_hundreds)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 13, graph_thousands)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 12, graph_ten_thousands)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 11, graph_lakhs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 10, graph_ten_lakhs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 9, graph_crores)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 8, graph_ten_crores)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 7, graph_arabs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 6, graph_ten_arabs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 5, graph_kharabs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 4, graph_ten_kharabs)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 3, graph_nils)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 2, graph_ten_nils)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 1, graph_padmas)
-        graph_shankhs |= create_larger_number_graph(digit, suffix_shankhs, 0, graph_ten_padmas)
-        graph_shankhs.optimize()
+        # Shankhs graph as thousand-koti-crores
+        # 100000000000000000 -> వెయ్యి కోటి కోట్లు
+        # 200000000000000000 -> రెండు వేల కోటి కోట్లు
+        # 1000000000000000000 -> పది వేల కోటి కోట్లు
 
-        graph_ten_shankhs = create_graph_suffix(teens_and_ties, suffix_shankhs, 17)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 16, digit)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 15, teens_ties)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 14, graph_hundreds)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 13, graph_thousands)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 12, graph_ten_thousands)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 11, graph_lakhs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 10, graph_ten_lakhs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 9, graph_crores)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 8, graph_ten_crores)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 7, graph_arabs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 6, graph_ten_arabs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 5, graph_kharabs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 4, graph_ten_kharabs)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 3, graph_nils)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 2, graph_ten_nils)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 1, graph_padmas)
-        graph_ten_shankhs |= create_larger_number_graph(teens_and_ties, suffix_shankhs, 0, graph_ten_padmas)
-        graph_ten_shankhs.optimize()
+        suffix_shankh_koti = pynutil.insert(" కోటి")
+        suffix_shankh_crores_plural = pynutil.insert(" కోట్లు")
 
+        shankh_koti_crore_count_prefix = (thousand_crore_prefix | ten_thousand_crore_prefix).optimize()
+        shankh_koti_count_prefix = (create_graph_suffix(shankh_koti_crore_count_prefix, suffix_shankh_koti,7,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 6, digit,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 5, teens_ties,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 4, graph_hundreds,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 3, graph_thousands,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 2, graph_ten_thousands,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 1, graph_lakhs,)
+            | create_larger_number_graph(shankh_koti_crore_count_prefix, suffix_shankh_koti, 0, padma_lakh_remainder_before_kotlu,)
+        ).optimize()
+
+        graph_shankhs = create_graph_suffix(shankh_koti_count_prefix, suffix_shankh_crores_plural, 7,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 6, digit,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 5, teens_ties,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 4, graph_hundreds,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 3, graph_thousands,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 2, graph_ten_thousands,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 1, graph_lakhs,)
+        graph_shankhs |= create_larger_number_graph(shankh_koti_count_prefix, suffix_shankh_crores_plural, 0, graph_ten_lakhs,)
+
+        graph_shankhs = pynutil.add_weight(graph_shankhs, -5.0,).optimize()
+        graph_ten_shankhs = graph_shankhs
+        
+        
         # Only match exactly 2 digits to avoid interfering with telephone numbers, decimals, etc.
         # e.g., "०५" -> "शून्य पाँच"
         single_digit = digit | zero
