@@ -58,12 +58,11 @@ class CardinalFst(GraphFst):
                 return digit_graph + suffix + pynutil.insert(" ") + sub_graph
             return digit_graph + suffix + (zero_delete ** zeros_counts) + pynutil.insert(" ") + sub_graph
 
-        # -------------------------
-        # Helpers
-        # -------------------------
-
         one = (pynini.cross("1", "ఒక") | pynini.cross("౧", "ఒక")).optimize()
-        one_empty = (pynini.cross("1", "") | pynini.cross("౧", "")).optimize()
+        one_empty = pynutil.add_weight(
+            pynini.cross("1", "") | pynini.cross("౧", ""),
+            0.1,
+        ).optimize()
 
         digit_except_one = (
             pynini.union(
@@ -98,9 +97,7 @@ class CardinalFst(GraphFst):
 
         teens_and_ties_for_scale = (one_ties_for_scale | teens_and_ties).optimize()
 
-        # -------------------------
         # Hundreds
-        # -------------------------
 
         graph_hundreds = pynini.cross("100", "వంద") | pynini.cross("౧౦౦", "వంద")
         graph_hundreds |= (pynini.cross("10", "నూట ") | pynini.cross("౧౦", "నూట ")) + digit
@@ -111,9 +108,8 @@ class CardinalFst(GraphFst):
         graph_hundreds = graph_hundreds.optimize()
         self.graph_hundreds = graph_hundreds
 
-        # Count form before scale nouns:
-        # రెండు వందల కోట్లు, not రెండు వందలు కోట్లు
         graph_hundreds_count = pynini.cross("100", "వంద") | pynini.cross("౧౦౦", "వంద")
+        graph_hundreds_count |= pynutil.add_weight(pynini.cross("100", "నూరు"), 0.2)
         graph_hundreds_count |= (pynini.cross("10", "నూట ") | pynini.cross("౧౦", "నూట ")) + digit_for_scale
         graph_hundreds_count |= (pynini.cross("1", "నూట ") | pynini.cross("౧", "నూట ")) + teens_and_ties_for_scale
         graph_hundreds_count |= create_graph_suffix(digit_except_one, pynutil.insert(" వందల"), 2)
@@ -123,19 +119,17 @@ class CardinalFst(GraphFst):
         )
         graph_hundreds_count = graph_hundreds_count.optimize()
 
-        # -------------------------
-        # Thousands / Ten thousands
-        # -------------------------
+        # Thousands
 
         suffix_thousand = pynutil.insert(" వెయ్యి")
+        suffix_thousand_plain = pynutil.insert("వెయ్యి")
         suffix_thousands_spoken = pynutil.insert(" వేలు")
         suffix_thousands_oblique = pynutil.insert(" వేల")
 
         graph_thousands = pynini.cross("1000", "వెయ్యి") | pynini.cross("౧౦౦౦", "వెయ్యి")
-        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand, 2, digit)
-        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand, 1, teens_ties)
-        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand, 0, graph_hundreds)
-
+        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand_plain, 2, digit)
+        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand_plain, 1, teens_ties)
+        graph_thousands |= create_larger_number_graph(one_empty, suffix_thousand_plain, 0, graph_hundreds)
         graph_thousands |= create_graph_suffix(digit_except_one, suffix_thousands_spoken, 3)
         graph_thousands |= create_larger_number_graph(digit_except_one, suffix_thousands_oblique, 2, digit)
         graph_thousands |= create_larger_number_graph(digit_except_one, suffix_thousands_oblique, 1, teens_ties)
@@ -157,24 +151,16 @@ class CardinalFst(GraphFst):
         graph_ten_thousands |= create_larger_number_graph(
             teens_and_ties_for_scale, suffix_thousands_oblique, 0, graph_hundreds
         )
-
-        graph_ten_thousands |= pynini.cross("21000", "ఇరవై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("31000", "ముప్పై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("41000", "నలభై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("51000", "యాభై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("61000", "అరవై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("71000", "డెబ్బై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("81000", "ఎనభై ఒక వెయ్యి")
-        graph_ten_thousands |= pynini.cross("91000", "తొంభై ఒక వెయ్యి")
-
         graph_ten_thousands = graph_ten_thousands.optimize()
         self.graph_ten_thousands = graph_ten_thousands
 
-        # Count-only thousands before "కోట్లు"
-        graph_thousands_count = pynini.cross("1000", "వెయ్యి") | pynini.cross("౧౦౦౦", "వెయ్యి")
-        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand, 2, digit_for_scale)
-        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand, 1, teens_and_ties_for_scale)
-        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand, 0, graph_hundreds_count)
+        graph_thousands_count = pynutil.add_weight(
+            pynini.cross("1000", "వెయ్యి") | pynini.cross("౧౦౦౦", "వెయ్యి"),
+            -1.0,
+        )
+        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand_plain, 2, digit_for_scale)
+        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand_plain, 1, teens_and_ties_for_scale)
+        graph_thousands_count |= create_larger_number_graph(one_empty, suffix_thousand_plain, 0, graph_hundreds_count)
         graph_thousands_count |= create_graph_suffix(digit_except_one, suffix_thousands_oblique, 3)
         graph_thousands_count |= create_larger_number_graph(digit_except_one, suffix_thousands_oblique, 2, digit_for_scale)
         graph_thousands_count |= create_larger_number_graph(
@@ -197,28 +183,35 @@ class CardinalFst(GraphFst):
         )
         graph_ten_thousands_count = graph_ten_thousands_count.optimize()
 
-        # -------------------------
-        # Lakhs / Ten lakhs
-        # -------------------------
+        # Lakhs
 
         suffix_lakh = pynutil.insert(" లక్ష")
+        suffix_lakh_plain = pynutil.insert("లక్ష")
         suffix_lakhs = pynutil.insert(" లక్షల")
         suffix_lakha = pynutil.insert(" లక్షా")
+        suffix_lakha_plain = pynutil.insert("లక్షా")
 
-        graph_lakhs = create_graph_suffix(one, suffix_lakh, 5)
+        graph_lakhs = pynutil.add_weight(
+            pynini.cross("100000", "లక్ష") | pynini.cross("౧౦౦౦౦౦", "లక్ష"),
+            -1.0,
+        )
+        graph_lakhs |= create_graph_suffix(one, suffix_lakh, 5)
         graph_lakhs |= create_larger_number_graph(one, suffix_lakha, 4, digit)
         graph_lakhs |= create_larger_number_graph(one, suffix_lakh, 3, teens_ties)
         graph_lakhs |= create_larger_number_graph(one, suffix_lakh, 2, graph_hundreds)
         graph_lakhs |= create_larger_number_graph(one, suffix_lakh, 1, graph_thousands)
         graph_lakhs |= create_larger_number_graph(one, suffix_lakh, 0, graph_ten_thousands)
-
+        graph_lakhs |= create_larger_number_graph(one_empty, suffix_lakha_plain, 4, digit)
+        graph_lakhs |= create_larger_number_graph(one_empty, suffix_lakh_plain, 3, teens_ties)
+        graph_lakhs |= create_larger_number_graph(one_empty, suffix_lakh_plain, 2, graph_hundreds)
+        graph_lakhs |= create_larger_number_graph(one_empty, suffix_lakh_plain, 1, graph_thousands)
+        graph_lakhs |= create_larger_number_graph(one_empty, suffix_lakh_plain, 0, graph_ten_thousands)
         graph_lakhs |= create_graph_suffix(digit_except_one, suffix_lakhs, 5)
         graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakhs, 4, digit)
         graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakhs, 3, teens_ties)
         graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakhs, 2, graph_hundreds)
         graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakhs, 1, graph_thousands)
         graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakhs, 0, graph_ten_thousands)
-
         graph_lakhs = graph_lakhs.optimize()
         self.graph_lakhs = graph_lakhs
 
@@ -231,14 +224,15 @@ class CardinalFst(GraphFst):
         graph_ten_lakhs = graph_ten_lakhs.optimize()
         self.graph_ten_lakhs = graph_ten_lakhs
 
-        # Count-only lakhs before "కోట్లు"
-        graph_lakhs_count = pynini.cross("100000", "లక్ష") | pynini.cross("౧౦౦౦౦౦", "లక్ష")
-        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh, 4, digit_for_scale)
-        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh, 3, teens_and_ties_for_scale)
-        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh, 2, graph_hundreds_count)
-        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh, 1, graph_thousands_count)
-        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh, 0, graph_ten_thousands_count)
-
+        graph_lakhs_count = pynutil.add_weight(
+            pynini.cross("100000", "లక్ష") | pynini.cross("౧౦౦౦౦౦", "లక్ష"),
+            -1.0,
+        )
+        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh_plain, 4, digit_for_scale)
+        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh_plain, 3, teens_and_ties_for_scale)
+        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh_plain, 2, graph_hundreds_count)
+        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh_plain, 1, graph_thousands_count)
+        graph_lakhs_count |= create_larger_number_graph(one_empty, suffix_lakh_plain, 0, graph_ten_thousands_count)
         graph_lakhs_count |= create_graph_suffix(digit_except_one, suffix_lakhs, 5)
         graph_lakhs_count |= create_larger_number_graph(digit_except_one, suffix_lakhs, 4, digit_for_scale)
         graph_lakhs_count |= create_larger_number_graph(digit_except_one, suffix_lakhs, 3, teens_and_ties_for_scale)
@@ -263,8 +257,6 @@ class CardinalFst(GraphFst):
         )
         graph_ten_lakhs_count = graph_ten_lakhs_count.optimize()
 
-        # Remainder lakhs after "కోట్లు"
-        # వంద కోట్లు లక్ష, వంద కోట్లు పది లక్షలు
         graph_lakhs_remainder = pynini.cross("100000", "లక్ష") | pynini.cross("౧౦౦౦౦౦", "లక్ష")
         graph_lakhs_remainder |= create_graph_suffix(digit_except_one, pynutil.insert(" లక్షలు"), 5)
         graph_lakhs_remainder |= create_larger_number_graph(digit_except_one, suffix_lakhs, 4, digit)
@@ -284,14 +276,17 @@ class CardinalFst(GraphFst):
         )
         graph_ten_lakhs_remainder = graph_ten_lakhs_remainder.optimize()
 
-        # -------------------------
-        # Crores / Ten crores
-        # -------------------------
+        # Crores
 
         suffix_crore = pynutil.insert(" కోటి")
+        suffix_crore_plain = pynutil.insert("కోటి")
         suffix_crores = pynutil.insert(" కోట్లు")
 
-        graph_crores = create_graph_suffix(one, suffix_crore, 7)
+        graph_crores = pynutil.add_weight(
+            pynini.cross("10000000", "కోటి") | pynini.cross("౧౦౦౦౦౦౦౦", "కోటి"),
+            -1.0,
+        )
+        graph_crores |= create_graph_suffix(one, suffix_crore, 7)
         graph_crores |= create_larger_number_graph(one, suffix_crore, 6, digit)
         graph_crores |= create_larger_number_graph(one, suffix_crore, 5, teens_ties)
         graph_crores |= create_larger_number_graph(one, suffix_crore, 4, graph_hundreds)
@@ -299,7 +294,13 @@ class CardinalFst(GraphFst):
         graph_crores |= create_larger_number_graph(one, suffix_crore, 2, graph_ten_thousands)
         graph_crores |= create_larger_number_graph(one, suffix_crore, 1, graph_lakhs)
         graph_crores |= create_larger_number_graph(one, suffix_crore, 0, graph_ten_lakhs)
-
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 6, digit)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 5, teens_ties)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 4, graph_hundreds)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 3, graph_thousands)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 2, graph_ten_thousands)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 1, graph_lakhs)
+        graph_crores |= create_larger_number_graph(one_empty, suffix_crore_plain, 0, graph_ten_lakhs)
         graph_crores |= create_graph_suffix(digit_except_one, suffix_crores, 7)
         graph_crores |= create_larger_number_graph(digit_except_one, suffix_crores, 6, digit)
         graph_crores |= create_larger_number_graph(digit_except_one, suffix_crores, 5, teens_ties)
@@ -322,8 +323,13 @@ class CardinalFst(GraphFst):
         graph_ten_crores = graph_ten_crores.optimize()
         self.graph_ten_crores = graph_ten_crores
 
-        # Count-only crore forms before final "కోట్లు"
-        count_crores = create_graph_suffix(digit_for_scale | teens_and_ties_for_scale, suffix_crore, 7)
+        one_crore_count = pynutil.add_weight(
+            pynini.cross("10000000", "కోటి") | pynini.cross("౧౦౦౦౦౦౦౦", "కోటి"),
+            -1.5,
+        )
+
+        count_crores = one_crore_count
+        count_crores |= create_graph_suffix(digit_for_scale | teens_and_ties_for_scale, suffix_crore, 7)
         count_crores |= create_larger_number_graph(
             digit_for_scale | teens_and_ties_for_scale, suffix_crore, 6, digit_for_scale
         )
@@ -361,10 +367,7 @@ class CardinalFst(GraphFst):
         count_hundred_crores |= create_larger_number_graph(graph_hundreds_count, suffix_crore, 0, graph_ten_lakhs_count)
         count_hundred_crores = count_hundred_crores.optimize()
 
-        # -------------------------
-        # Conversational large scales
-        # అరబ్ / ఖరబ్ / నీల్ / పద్మ / శంఖ are expressed as కోట్లు.
-        # -------------------------
+        # Large scales as crore counts
 
         suffix_kotlu = pynutil.insert(" కోట్లు")
 
@@ -377,43 +380,46 @@ class CardinalFst(GraphFst):
             g |= create_larger_number_graph(count_graph, suffix_kotlu, 2, graph_ten_thousands)
             g |= create_larger_number_graph(count_graph, suffix_kotlu, 1, graph_lakhs_remainder)
             g |= create_larger_number_graph(count_graph, suffix_kotlu, 0, graph_ten_lakhs_remainder)
-            g |= create_larger_number_graph(count_graph, suffix_kotlu, 1, graph_crores)
-            g |= create_larger_number_graph(count_graph, suffix_kotlu, 0, graph_ten_crores)
+            g |= pynutil.add_weight(create_larger_number_graph(count_graph, suffix_kotlu, 1, graph_crores), -0.3)
+            g |= pynutil.add_weight(create_larger_number_graph(count_graph, suffix_kotlu, 0, graph_ten_crores), -0.3)
             return g.optimize()
 
-        graph_arabs = make_large_scale_graph(graph_hundreds_count)
-        graph_ten_arabs = make_large_scale_graph(graph_thousands_count | graph_ten_thousands_count)
-        graph_kharabs = make_large_scale_graph(graph_ten_thousands_count)
-        graph_ten_kharabs = make_large_scale_graph(graph_lakhs_count | graph_ten_lakhs_count)
-        graph_nils = make_large_scale_graph(graph_ten_lakhs_count)
-        graph_ten_nils = make_large_scale_graph(count_crores)
-        graph_padmas = make_large_scale_graph(count_crores)
-        graph_shankhs = make_large_scale_graph(count_hundred_crores)
+        graph_arabs = pynutil.add_weight(make_large_scale_graph(graph_hundreds_count), -0.3)
+        graph_ten_arabs = pynutil.add_weight(
+            make_large_scale_graph(graph_thousands_count | graph_ten_thousands_count), -0.4
+        )
+        graph_kharabs = pynutil.add_weight(make_large_scale_graph(graph_ten_thousands_count), -0.5)
+        graph_ten_kharabs = pynutil.add_weight(
+            make_large_scale_graph(graph_lakhs_count | graph_ten_lakhs_count), -0.6
+        )
+        graph_nils = pynutil.add_weight(make_large_scale_graph(graph_ten_lakhs_count), -0.7)
+        graph_ten_nils = pynutil.add_weight(make_large_scale_graph(one_crore_count | count_crores), -0.8)
+        graph_padmas = pynutil.add_weight(make_large_scale_graph(count_crores), -0.9)
+        graph_shankhs = pynutil.add_weight(make_large_scale_graph(count_hundred_crores), -1.0)
 
-        # Leading zero handling
         single_digit = digit | zero
         graph_leading_zero = zero + insert_space + single_digit
         graph_leading_zero = pynutil.add_weight(graph_leading_zero, 0.5)
 
         graph_without_leading_zeros = (
-            digit
-            | zero
-            | teens_and_ties
-            | graph_hundreds
-            | graph_thousands
-            | graph_ten_thousands
-            | graph_lakhs
-            | graph_ten_lakhs
-            | graph_crores
-            | graph_ten_crores
-            | graph_arabs
-            | graph_ten_arabs
-            | graph_kharabs
-            | graph_ten_kharabs
-            | graph_nils
-            | graph_ten_nils
+            graph_shankhs
             | graph_padmas
-            | graph_shankhs
+            | graph_ten_nils
+            | graph_nils
+            | graph_ten_kharabs
+            | graph_kharabs
+            | graph_ten_arabs
+            | graph_arabs
+            | graph_ten_crores
+            | graph_crores
+            | graph_ten_lakhs
+            | graph_lakhs
+            | graph_ten_thousands
+            | graph_thousands
+            | graph_hundreds
+            | teens_and_ties
+            | digit
+            | zero
         )
 
         self.graph_without_leading_zeros = graph_without_leading_zeros.optimize()
@@ -433,4 +439,3 @@ class CardinalFst(GraphFst):
         final_graph = optional_minus_graph + pynutil.insert("integer: \"") + self.final_graph + pynutil.insert("\"")
         final_graph = self.add_tokens(final_graph)
         self.fst = final_graph
-
