@@ -119,8 +119,6 @@ class CardinalFst(GraphFst):
         self.graph_ten_thousands = graph_ten_thousands
 
         # Lakhs graph and ten lakhs graph
-                # Lakhs graph and Ten lakhs graph
-
         one_lakh_prefix = pynutil.delete(pynini.union("1", "౧"))
 
         suffix_lakh_exact = pynutil.insert("లక్ష")
@@ -132,187 +130,37 @@ class CardinalFst(GraphFst):
         graph_lakhs = pynini.cross("100000", "లక్ష")
         graph_lakhs |= pynini.cross("౧౦౦౦౦౦", "లక్ష")
 
-        # 100001–100009 -> లక్షా ఒకటి
-        graph_lakhs |= create_larger_number_graph(
-            one_lakh_prefix,
-            suffix_lakha_digit,
-            4,
-            digit,
-        )
-
-        # 100010–100099 -> లక్ష పది
-        graph_lakhs |= create_larger_number_graph(
-            one_lakh_prefix,
-            suffix_lakh_exact,
-            3,
-            teens_ties,
-        )
-
-        # 100100–100999 -> లక్ష వంద
-        graph_lakhs |= create_larger_number_graph(
-            one_lakh_prefix,
-            suffix_lakh_exact,
-            2,
-            graph_hundreds,
-        )
-
-        # 101000–109999 -> లక్ష వెయ్యి
-        graph_lakhs |= create_larger_number_graph(
-            one_lakh_prefix,
-            suffix_lakh_exact,
-            1,
-            graph_thousands,
-        )
-
-        # 110000–199999 -> లక్ష పది వేలు
-        graph_lakhs |= create_larger_number_graph(
-            one_lakh_prefix,
-            suffix_lakh_exact,
-            0,
-            graph_ten_thousands,
-        )
-
-        # 200000–900000 -> రెండు లక్షలు
-        graph_lakhs |= create_graph_suffix(
-            digit_except_one,
-            suffix_lakh_plural,
-            5,
-        )
-
-        # 200001–200009 -> రెండు లక్షల ఒకటి
-        graph_lakhs |= create_larger_number_graph(
-            digit_except_one,
-            suffix_lakh_before,
-            4,
-            digit,
-        )
-
-        # 200010–200099
-        graph_lakhs |= create_larger_number_graph(
-            digit_except_one,
-            suffix_lakh_before,
-            3,
-            teens_ties,
-        )
-
-        # 200100–200999
-        graph_lakhs |= create_larger_number_graph(
-            digit_except_one,
-            suffix_lakh_before,
-            2,
-            graph_hundreds,
-        )
-
-        # 201000–209999
-        graph_lakhs |= create_larger_number_graph(
-            digit_except_one,
-            suffix_lakh_before,
-            1,
-            graph_thousands,
-        )
-
-        # 210000–999999
-        graph_lakhs |= create_larger_number_graph(
-            digit_except_one,
-            suffix_lakh_before,
-            0,
-            graph_ten_thousands,
-        )
-
+        graph_lakhs |= create_larger_number_graph(one_lakh_prefix, suffix_lakha_digit, 4, digit,)  # 100001–100009 -> లక్షా ఒకటి
+        graph_lakhs |= create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 3, teens_ties,) # 100010–100099 -> లక్ష పది
+        graph_lakhs |= create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 2, graph_hundreds,) # 100100–100999 -> లక్ష వంద
+        graph_lakhs |= create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 1, graph_thousands,) # 101000–109999 -> లక్ష వెయ్యి
+        graph_lakhs |= create_larger_number_graph(one_lakh_prefix, suffix_lakh_exact, 0, graph_ten_thousands,) # 110000–199999 -> లక్ష పది వేలు
+        graph_lakhs |= create_graph_suffix(digit_except_one, suffix_lakh_plural, 5,) # 200000–900000 -> రెండు లక్షలు
+        graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakh_before, 4, digit,) # 200001–200009 -> రెండు లక్షల ఒకటి
+        graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakh_before, 3, teens_ties,) # 200010–200099
+        graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakh_before, 2, graph_hundreds,) # 200100–200999
+        graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakh_before, 1, graph_thousands,) # 201000–209999
+        graph_lakhs |= create_larger_number_graph(digit_except_one, suffix_lakh_before, 0, graph_ten_thousands,) # 210000–999999
         graph_lakhs = graph_lakhs.optimize()
         self.graph_lakhs = graph_lakhs
 
         # Ten lakhs graph
-
         suffix_ten_lakh_exact = pynutil.insert(" లక్ష")
         suffix_ten_lakh_plural = pynutil.insert(" లక్షలు")
         suffix_ten_lakh_before = pynutil.insert(" లక్షల")
 
-        # 2100000, 3100000, ... -> ఇరవై ఒక లక్ష
-        graph_ten_lakhs = create_graph_suffix(
-            teens_ties_thousand,
-            suffix_ten_lakh_exact,
-            5,
-        )
-
-        # 2100001, 3100001, ... -> ఇరవై ఒక లక్షల ఒకటి
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_ties_thousand,
-            suffix_ten_lakh_before,
-            4,
-            digit,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_ties_thousand,
-            suffix_ten_lakh_before,
-            3,
-            teens_ties,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_ties_thousand,
-            suffix_ten_lakh_before,
-            2,
-            graph_hundreds,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_ties_thousand,
-            suffix_ten_lakh_before,
-            1,
-            graph_thousands,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_ties_thousand,
-            suffix_ten_lakh_before,
-            0,
-            graph_ten_thousands,
-        )
-
-        # 1000000, 1100000, 2200000, 9900000 -> పది లక్షలు
-        graph_ten_lakhs |= create_graph_suffix(
-            teens_and_ties,
-            suffix_ten_lakh_plural,
-            5,
-        )
-
-        # 1000001, 2200001
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_and_ties,
-            suffix_ten_lakh_before,
-            4,
-            digit,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_and_ties,
-            suffix_ten_lakh_before,
-            3,
-            teens_ties,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_and_ties,
-            suffix_ten_lakh_before,
-            2,
-            graph_hundreds,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_and_ties,
-            suffix_ten_lakh_before,
-            1,
-            graph_thousands,
-        )
-
-        graph_ten_lakhs |= create_larger_number_graph(
-            teens_and_ties,
-            suffix_ten_lakh_before,
-            0,
-            graph_ten_thousands,
-        )
+        graph_ten_lakhs = create_graph_suffix(teens_ties_thousand, suffix_ten_lakh_exact, 5,) # 2100000, 3100000, ... -> ఇరవై ఒక లక్ష
+        graph_ten_lakhs |= create_larger_number_graph(teens_ties_thousand, suffix_ten_lakh_before, 4, digit,) # 2100001, 3100001, ... -> ఇరవై ఒక లక్షల ఒకటి
+        graph_ten_lakhs |= create_larger_number_graph( teens_ties_thousand, suffix_ten_lakh_before, 3, teens_ties,)
+        graph_ten_lakhs |= create_larger_number_graph(teens_ties_thousand, suffix_ten_lakh_before, 2, graph_hundreds,)
+        graph_ten_lakhs |= create_larger_number_graph(teens_ties_thousand, suffix_ten_lakh_before, 1, graph_thousands,)
+        graph_ten_lakhs |= create_larger_number_graph(teens_ties_thousand, suffix_ten_lakh_before, 0, graph_ten_thousands,)
+        graph_ten_lakhs |= create_graph_suffix(teens_and_ties, suffix_ten_lakh_plural, 5,) # 1000000, 1100000, 2200000, 9900000 -> పది లక్షలు
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_ten_lakh_before, 4, digit,) # 1000001, 2200001
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_ten_lakh_before, 3, teens_ties,)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_ten_lakh_before, 2, graph_hundreds,)
+        graph_ten_lakhs |= create_larger_number_graph( teens_and_ties, suffix_ten_lakh_before, 1, graph_thousands,)
+        graph_ten_lakhs |= create_larger_number_graph(teens_and_ties, suffix_ten_lakh_before, 0, graph_ten_thousands,)
 
         graph_ten_lakhs = graph_ten_lakhs.optimize()
         self.graph_ten_lakhs = graph_ten_lakhs
