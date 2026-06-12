@@ -277,6 +277,94 @@ class CardinalFst(GraphFst):
 
         graph_arabs = graph_arabs.optimize()
         graph_ten_arabs = graph_arabs
+                # Ten Arabs graph as thousands of crores
+        # 10000000000 -> వెయ్యి కోట్లు
+        # 20000000000 -> రెండు వేల కోట్లు
+        # 999999999999 -> తొంభై తొమ్మిది వేల తొమ్మిది వందల తొంభై తొమ్మిది కోట్లు ...
+
+        suffix_thousand_crores_plural = pynutil.insert(" కోట్లు")
+
+        thousand_crore_prefix = (
+            pynini.cross("1000", "వెయ్యి")
+            | pynini.cross("౧౦౦౦", "వెయ్యి")
+            | create_graph_suffix(digit_except_one, pynutil.insert(" వేల"), 3)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" వేల"), 2, digit)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" వేల"), 1, teens_ties)
+            | create_larger_number_graph(digit_except_one, pynutil.insert(" వేల"), 0, hundred_crore_prefix)
+            | create_larger_number_graph(one_thousand_prefix, pynutil.insert("వెయ్యి"), 2, digit)
+            | create_larger_number_graph(one_thousand_prefix, pynutil.insert("వెయ్యి"), 1, teens_ties)
+            | create_larger_number_graph(one_thousand_prefix, pynutil.insert("వెయ్యి"), 0, hundred_crore_prefix)
+        ).optimize()
+
+        ten_thousand_crore_prefix = (
+            create_graph_suffix(teens_ties_thousand, pynutil.insert(" వెయ్యి"), 3)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" వేల"), 2, digit)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" వేల"), 1, teens_ties)
+            | create_larger_number_graph(teens_ties_thousand, pynutil.insert(" వేల"), 0, hundred_crore_prefix)
+            | create_graph_suffix(teens_and_ties, pynutil.insert(" వేల"), 3)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" వేల"), 2, digit)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" వేల"), 1, teens_ties)
+            | create_larger_number_graph(teens_and_ties, pynutil.insert(" వేల"), 0, hundred_crore_prefix)
+        ).optimize()
+
+        crore_count_prefix = thousand_crore_prefix | ten_thousand_crore_prefix
+
+        graph_ten_arabs = create_graph_suffix(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            7,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            6,
+            digit,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            5,
+            teens_ties,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            4,
+            graph_hundreds,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            3,
+            graph_thousands,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            2,
+            graph_ten_thousands,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            1,
+            graph_lakhs,
+        )
+
+        graph_ten_arabs |= create_larger_number_graph(
+            crore_count_prefix,
+            suffix_thousand_crores_plural,
+            0,
+            graph_ten_lakhs,
+        )
+
+        graph_ten_arabs = pynutil.add_weight(graph_ten_arabs, -1.0).optimize()
 
         # Kharabs graph and ten kharabs graph
         suffix_kharabs = pynutil.insert(" ఖరబ్")
