@@ -501,6 +501,36 @@ class CardinalFst(GraphFst):
         graph_padmas = pynutil.add_weight(graph_padmas, -4.0,).optimize()
         graph_ten_padmas = graph_padmas
 
+        # Ten Padmas graph as hundred-koti-crores
+        # 10000000000000000 -> వంద కోటి కోట్లు
+        # 20100000000000000 -> రెండు వందల ఒక కోటి కోట్లు
+
+        suffix_ten_padma_crores_plural = pynutil.insert(" కోట్లు")
+        ten_padma_one_crore_count_prefix = create_graph_suffix(hundred_one_crore_prefix, pynutil.insert(" కోటి"), 7,).optimize()
+
+        ten_padma_crore_count_prefix = (
+            ten_padma_one_crore_count_prefix
+            | create_graph_suffix(hundred_crore_prefix, pynutil.insert(" కోటి"), 7)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 6, digit)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 5, teens_ties)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 4, graph_hundreds)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 3, graph_thousands)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 2, graph_ten_thousands)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 1, graph_lakhs)
+            | create_larger_number_graph(hundred_crore_prefix, pynutil.insert(" కోటి"), 0, padma_lakh_remainder_before_kotlu)
+        ).optimize()
+
+        graph_ten_padmas = create_graph_suffix(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 7,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 6, digit,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 5, teens_ties,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 4, graph_hundreds,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 3, graph_thousands,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 2, graph_ten_thousands,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 1, graph_lakhs,)
+        graph_ten_padmas |= create_larger_number_graph(ten_padma_crore_count_prefix, suffix_ten_padma_crores_plural, 0, graph_ten_lakhs,)
+
+        graph_ten_padmas = pynutil.add_weight(graph_ten_padmas, -4.5,).optimize()
+
         # Shankhs graph and ten shankhs graph
         suffix_shankhs = pynutil.insert(" పద్మ")
         graph_shankhs = create_graph_suffix(digit, suffix_shankhs, 17)
