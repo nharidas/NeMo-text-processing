@@ -560,7 +560,6 @@ class CardinalFst(GraphFst):
         graph_shankhs = pynutil.add_weight(graph_shankhs, -5.0,).optimize()
         graph_ten_shankhs = graph_shankhs
         
-        
         # Only match exactly 2 digits to avoid interfering with telephone numbers, decimals, etc.
         # e.g., "०५" -> "शून्य पाँच"
         single_digit = digit | zero
