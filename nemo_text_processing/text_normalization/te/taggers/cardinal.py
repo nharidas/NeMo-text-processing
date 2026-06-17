@@ -39,10 +39,10 @@ class CardinalFst(GraphFst):
 
         digit = pynini.string_file(get_abs_path("data/numbers/digit.tsv"))
         zero = pynini.string_file(get_abs_path("data/numbers/zero.tsv"))
-        teens_ties_hi = pynini.string_file(get_abs_path("data/numbers/teens_and_ties.tsv"))
+        teens_ties_te = pynini.string_file(get_abs_path("data/numbers/teens_and_ties.tsv"))
         teens_ties_en = pynini.string_file(get_abs_path("data/numbers/teens_and_ties_en.tsv"))
         teens_ties_thousand = pynutil.add_weight(pynini.string_file(get_abs_path("data/numbers/teens_and_ties_thousand.tsv")),-0.2,)
-        teens_ties = pynini.union(teens_ties_hi, teens_ties_en)
+        teens_ties = pynini.union(teens_ties_te, teens_ties_en)
         teens_and_ties = pynutil.add_weight(teens_ties, -0.1)
 
         self.digit = digit
