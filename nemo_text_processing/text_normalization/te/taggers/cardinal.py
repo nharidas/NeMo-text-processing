@@ -1,3 +1,17 @@
+# Copyright (c) 2026, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import pynini
 from pynini.lib import pynutil
 
@@ -36,7 +50,6 @@ class CardinalFst(GraphFst):
         self.teens_and_ties = teens_and_ties
 
         # Single digit graph for digit-by-digit reading
-        # e.g., "०७३" -> "शून्य सात तीन"
         single_digit_graph = digit | zero
         self.single_digits_graph = single_digit_graph + pynini.closure(insert_space + single_digit_graph)
 
@@ -571,7 +584,6 @@ class CardinalFst(GraphFst):
         graph_ten_shankhs = graph_shankhs
         
         # Only match exactly 2 digits to avoid interfering with telephone numbers, decimals, etc.
-        # e.g., "०५" -> "शून्य पाँच"
         single_digit = digit | zero
         graph_leading_zero = zero + insert_space + single_digit
         graph_leading_zero = pynutil.add_weight(graph_leading_zero, 0.5)
@@ -601,7 +613,6 @@ class CardinalFst(GraphFst):
         self.graph_without_leading_zeros = graph_without_leading_zeros.optimize()
 
         # Handle numbers with leading zeros by reading digit-by-digit
-        # e.g., English/arabic "073" -> "शून्य सात तीन", Hindi/devnagri "००५" -> "शून्य शून्य पाँच"
         cardinal_with_leading_zeros = pynini.compose(
             NEMO_ALL_ZERO + pynini.closure(NEMO_ALL_DIGIT), self.single_digits_graph
         )
