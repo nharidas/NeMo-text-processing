@@ -20,9 +20,9 @@ from nemo_text_processing.text_normalization.te.graph_utils import NEMO_NOT_QUOT
 
 class OrdinalFst(GraphFst):
     """
-    Finite state transducer for verbalizing Hindi ordinals, e.g.
-        ordinal { integer: "दसवां" } -> दसवां
-        ordinal { integer: "इक्कीसवीं" } -> इक्कीसवीं
+    Finite state transducer for verbalizing Telugu ordinals, e.g.
+        ordinal { integer: "పదవ" } -> పదవ
+        ordinal { integer: "ఇరవై ఒకటవ" } -> ఇరవై ఒకటవ
 
     Args:
         deterministic: if True will provide a single transduction option,
