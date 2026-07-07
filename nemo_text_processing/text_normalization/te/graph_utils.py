@@ -66,7 +66,7 @@ DECIMAL_25 = pynini.union(TE_DECIMAL_25, EN_DECIMAL_25).optimize()
 DECIMAL_75 = pynini.union(TE_DECIMAL_75, EN_DECIMAL_75).optimize()
 
 # Symbol constants
-TE_BY = "బై" # Transliterated 'by' for fractions/ratios (e.g., 2/3 -> రెండు బై మూడు)
+TE_BY = "బై"  # Transliterated 'by' for fractions/ratios (e.g., 2/3 -> రెండు బై మూడు)
 LOWERCASE_X = "x"
 UPPERCASE_X = "X"
 ASTERISK = "*"
@@ -102,7 +102,7 @@ MIN_NEG_WEIGHT = -0.0001
 MIN_POS_WEIGHT = 0.0001
 INPUT_CASED = "cased"
 INPUT_LOWER_CASED = "lower_cased"
-MINUS = pynini.union(" మైనస్ ", " ఋణ ").optimize() # 'మైనస్' (Minus) is highly preferred in modern ITN
+MINUS = pynini.union(" మైనస్ ", " ఋణ ").optimize()  # 'మైనస్' (Minus) is highly preferred in modern ITN
 
 
 def capitalized_input_graph(
