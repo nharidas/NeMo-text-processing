@@ -27,17 +27,17 @@ from nemo_text_processing.text_normalization.te.graph_utils import (
     generator_main,
 )
 from nemo_text_processing.text_normalization.te.taggers.cardinal import CardinalFst
-# from nemo_text_processing.text_normalization.hi.taggers.date import DateFst
+# from nemo_text_processing.text_normalization.te.taggers.date import DateFst
 from nemo_text_processing.text_normalization.te.taggers.decimal import DecimalFst
-# from nemo_text_processing.text_normalization.hi.taggers.electronic import ElectronicFst
-# from nemo_text_processing.text_normalization.hi.taggers.fraction import FractionFst
-# from nemo_text_processing.text_normalization.hi.taggers.measure import MeasureFst
-# from nemo_text_processing.text_normalization.hi.taggers.money import MoneyFst
+# from nemo_text_processing.text_normalization.te.taggers.electronic import ElectronicFst
+from nemo_text_processing.text_normalization.te.taggers.fraction import FractionFst
+# from nemo_text_processing.text_normalization.te.taggers.measure import MeasureFst
+# from nemo_text_processing.text_normalization.te.taggers.money import MoneyFst
 from nemo_text_processing.text_normalization.te.taggers.ordinal import OrdinalFst
 from nemo_text_processing.text_normalization.te.taggers.punctuation import PunctuationFst
-# from nemo_text_processing.text_normalization.hi.taggers.telephone import TelephoneFst
-# from nemo_text_processing.text_normalization.hi.taggers.time import TimeFst
-# from nemo_text_processing.text_normalization.hi.taggers.whitelist import WhiteListFst
+# from nemo_text_processing.text_normalization.te.taggers.telephone import TelephoneFst
+# from nemo_text_processing.text_normalization.te.taggers.time import TimeFst
+# from nemo_text_processing.text_normalization.te.taggers.whitelist import WhiteListFst
 from nemo_text_processing.text_normalization.te.taggers.word import WordFst
 
 
@@ -72,7 +72,7 @@ class ClassifyFst(GraphFst):
             whitelist_file = os.path.basename(whitelist) if whitelist else ""
             far_file = os.path.join(
                 cache_dir,
-                f"hi_tn_{deterministic}_deterministic_{input_case}_{whitelist_file}_tokenize.far",
+                f"te_tn_{deterministic}_deterministic_{input_case}_{whitelist_file}_tokenize.far",
             )
         if not overwrite_cache and far_file and os.path.exists(far_file):
             self.fst = pynini.Far(far_file, mode="r")["tokenize_and_classify"]
@@ -86,8 +86,8 @@ class ClassifyFst(GraphFst):
             decimal = DecimalFst(cardinal=cardinal, deterministic=deterministic)
             decimal_graph = decimal.fst
 
-            # fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
-            # fraction_graph = fraction.fst
+            fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
+            fraction_graph = fraction.fst
 
             # date = DateFst(cardinal=cardinal)
             # date_graph = date.fst
@@ -121,7 +121,7 @@ class ClassifyFst(GraphFst):
                 # pynutil.add_weight(whitelist_graph, 1.01)| 
                 pynutil.add_weight(cardinal_graph, 1.1)
                 | pynutil.add_weight(decimal_graph, 1.1)
-                # | pynutil.add_weight(fraction_graph, 1.1)
+                | pynutil.add_weight(fraction_graph, 1.1)
                 # | pynutil.add_weight(date_graph, 1.1)
                 # | pynutil.add_weight(time_graph, 1.1)
                 # | pynutil.add_weight(measure_graph, 1.1)

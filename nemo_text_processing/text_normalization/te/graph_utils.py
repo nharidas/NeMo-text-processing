@@ -38,11 +38,11 @@ NEMO_ALL_ZERO = pynini.union("౦", "0").optimize()
 NEMO_ALL_NON_ZERO = pynini.union(NEMO_TE_NON_ZERO, "1", "2", "3", "4", "5", "6", "7", "8", "9").optimize()
 
 # Telugu fractional terms
-TE_DEDH = "ఒకటిన్నర"  # 1.5 (one and a half)
-TE_DHAI = "రెండున్నర"  # 2.5 (two and a half)
-TE_SAVVA = "సవా"  # quarter more (Borrowed/used in contexts like 'sava muna' or 'sava poddu')
-TE_SADHE = "న్నర"  # half more (suffix used like మూడున్నర - 3.5)
-TE_PAUNE = "పావుతక్కువ"  # quarter less (e.g., પાઉં કમ / quarter to)
+TE_DEDH = "ఒకటిన్నర"
+TE_DHAI = "రెండున్నర"
+TE_HALF_WORD = "అర"
+TE_QUARTER_WORD = "పావు"
+TE_THREE_QUARTERS_WORD = "ముప్పావు"
 
 # Telugu native decimal representations
 TE_POINT_FIVE = ".౫"  # .5

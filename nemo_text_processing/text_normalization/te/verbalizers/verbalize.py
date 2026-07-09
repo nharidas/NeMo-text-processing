@@ -14,16 +14,16 @@
 
 from nemo_text_processing.text_normalization.te.graph_utils import GraphFst
 from nemo_text_processing.text_normalization.te.verbalizers.cardinal import CardinalFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.date import DateFst
+# from nemo_text_processing.text_normalization.te.verbalizers.date import DateFst
 from nemo_text_processing.text_normalization.te.verbalizers.decimal import DecimalFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.electronic import ElectronicFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.fraction import FractionFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.measure import MeasureFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.money import MoneyFst
+# from nemo_text_processing.text_normalization.te.verbalizers.electronic import ElectronicFst
+from nemo_text_processing.text_normalization.te.verbalizers.fraction import FractionFst
+# from nemo_text_processing.text_normalization.te.verbalizers.measure import MeasureFst
+# from nemo_text_processing.text_normalization.te.verbalizers.money import MoneyFst
 from nemo_text_processing.text_normalization.te.verbalizers.ordinal import OrdinalFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.telephone import TelephoneFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.time import TimeFst
-# from nemo_text_processing.text_normalization.hi.verbalizers.whitelist import WhiteListFst
+# from nemo_text_processing.text_normalization.te.verbalizers.telephone import TelephoneFst
+# from nemo_text_processing.text_normalization.te.verbalizers.time import TimeFst
+# from nemo_text_processing.text_normalization.te.verbalizers.whitelist import WhiteListFst
 
 
 class VerbalizeFst(GraphFst):
@@ -46,8 +46,8 @@ class VerbalizeFst(GraphFst):
         decimal = DecimalFst(deterministic=deterministic)
         decimal_graph = decimal.fst
 
-        # fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
-        # fraction_graph = fraction.fst
+        fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
+        fraction_graph = fraction.fst
 
         # date = DateFst()
         # date_graph = date.fst
@@ -75,7 +75,7 @@ class VerbalizeFst(GraphFst):
         graph = (
             cardinal_graph
             | decimal_graph
-            # | fraction_graph
+            | fraction_graph
             # | date_graph
             # | time_graph
             # | measure_graph
