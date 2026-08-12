@@ -27,7 +27,7 @@ from nemo_text_processing.text_normalization.te.graph_utils import (
     generator_main,
 )
 from nemo_text_processing.text_normalization.te.taggers.cardinal import CardinalFst
-# from nemo_text_processing.text_normalization.te.taggers.date import DateFst
+from nemo_text_processing.text_normalization.te.taggers.date import DateFst
 from nemo_text_processing.text_normalization.te.taggers.decimal import DecimalFst
 # from nemo_text_processing.text_normalization.te.taggers.electronic import ElectronicFst
 from nemo_text_processing.text_normalization.te.taggers.fraction import FractionFst
@@ -89,8 +89,8 @@ class ClassifyFst(GraphFst):
             fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
             fraction_graph = fraction.fst
 
-            # date = DateFst(cardinal=cardinal)
-            # date_graph = date.fst
+            date = DateFst(cardinal=cardinal)
+            date_graph = date.fst
 
             # timefst = TimeFst(cardinal=cardinal)
             # time_graph = timefst.fst
@@ -122,7 +122,7 @@ class ClassifyFst(GraphFst):
                 pynutil.add_weight(cardinal_graph, 1.1)
                 | pynutil.add_weight(decimal_graph, 1.1)
                 | pynutil.add_weight(fraction_graph, 1.1)
-                # | pynutil.add_weight(date_graph, 1.1)
+                | pynutil.add_weight(date_graph, 1.1)
                 # | pynutil.add_weight(time_graph, 1.1)
                 # | pynutil.add_weight(measure_graph, 1.1)
                 # | pynutil.add_weight(money_graph, 1.1)
