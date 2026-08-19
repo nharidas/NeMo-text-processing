@@ -43,9 +43,9 @@ class PunctuationFst(GraphFst):
             if category(chr(i)).startswith("P") and chr(i) not in punct_symbols_to_exclude
         ]
 
-        self.punct_marks = [p for p in punct_unicode + list(s)]
+        punct_marks = punct_unicode + list(s)
 
-        punct = pynini.union(*self.punct_marks)
+        punct = pynini.union(*punct_marks)
         punct = pynini.closure(punct, 1)
 
         emphasis = (
@@ -58,5 +58,4 @@ class PunctuationFst(GraphFst):
         )
         punct = plurals._priority_union(emphasis, punct, NEMO_SIGMA)
 
-        self.graph = punct
-        self.fst = (pynutil.insert("name: \"") + self.graph + pynutil.insert("\"")).optimize()
+        self.fst = (pynutil.insert("name: \"") + punct + pynutil.insert("\"")).optimize()

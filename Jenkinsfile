@@ -128,13 +128,7 @@ pipeline {
             steps {
                 sh 'CUDA_VISIBLE_DEVICES="" python nemo_text_processing/text_normalization/normalize.py --lang=te --text="౧" --cache_dir ${TE_TN_CACHE}'
             }
-        }
-        // stage('L0: TE ITN grammars') {
-        //     steps {
-        //         sh 'CUDA_VISIBLE_DEVICES="" python nemo_text_processing/inverse_text_normalization/inverse_normalize.py --lang=te --text="ఒకటి" --cache_dir ${TE_TN_CACHE}'
-        //     }
-        // }
-        
+        }       
       }
     }
 

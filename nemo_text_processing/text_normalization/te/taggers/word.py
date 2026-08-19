@@ -15,47 +15,20 @@
 import pynini
 from pynini.lib import pynutil
 
-from nemo_text_processing.text_normalization.te.graph_utils import (
-    MIN_NEG_WEIGHT,
-    NEMO_NOT_SPACE,
-    GraphFst,
-    convert_space,
-)
-from nemo_text_processing.text_normalization.te.taggers.punctuation import PunctuationFst
+from nemo_text_processing.text_normalization.te.graph_utils import NEMO_NOT_SPACE, GraphFst
 
 
 class WordFst(GraphFst):
     """
     Finite state transducer for classifying Telugu words.
-        e.g. సోనా -> tokens { name: "సోనా" }
+        e.g. తెలుగు -> tokens { name: "తెలుగు" }
 
     Args:
-        punctuation: PunctuationFst
         deterministic: if True will provide a single transduction option,
             for False multiple transductions are generated (used for audio-based normalization)
     """
 
-    def __init__(self, punctuation: PunctuationFst, deterministic: bool = True):
+    def __init__(self, deterministic: bool = True):
         super().__init__(name="word", kind="classify", deterministic=deterministic)
-
-        # Define Telugu characters and symbols using pynini.union
-        TELUGU_CHAR = pynini.union(
-            *[chr(i) for i in range(0x0C00, 0x0C03 + 1)],  # Telugu signs (Anusvara, Visarga)
-            *[chr(i) for i in range(0x0C05, 0x0C39 + 1)],  # Telugu vowels and consonants
-            *[chr(i) for i in range(0x0C3E, 0x0C4D + 1)],  # Telugu vowel signs (diacritics) and Virama
-        ).optimize()
-
-        # Include punctuation in the graph
-        punct = punctuation.graph
-        default_graph = pynini.closure(pynini.difference(NEMO_NOT_SPACE, punct.project("input")), 1)
-        symbols_to_exclude = (pynini.union("$", "€", "₩", "£", "¥", "#", "%") | punct).optimize()
-
-        # Use TELUGU_CHAR in the graph
-        graph = pynini.closure(pynini.difference(TELUGU_CHAR, symbols_to_exclude), 1)
-        graph = pynutil.add_weight(graph, MIN_NEG_WEIGHT) | default_graph
-
-        # Ensure no spaces around punctuation
-        graph = pynini.closure(graph + pynini.closure(punct + graph, 0, 1))
-
-        self.graph = convert_space(graph)
-        self.fst = (pynutil.insert("name: \"") + self.graph + pynutil.insert("\"")).optimize()
+        word = pynutil.insert("name: \"") + pynini.closure(NEMO_NOT_SPACE, 1) + pynutil.insert("\"")
+        self.fst = word.optimize()

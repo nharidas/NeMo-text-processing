@@ -19,12 +19,10 @@ from nemo_text_processing.text_normalization.te.graph_utils import (
     NEMO_ALL_DIGIT,
     NEMO_ALL_ZERO,
     NEMO_DIGIT,
-    NEMO_TE_DIGIT,
     GraphFst,
     insert_space,
 )
-from nemo_text_processing.text_normalization.te.utils import get_abs_path
-
+from nemo_text_processing.text_normalization.te.utils import get_abs_path, load_labels
 
 class CardinalFst(GraphFst):
     """
@@ -43,20 +41,9 @@ class CardinalFst(GraphFst):
         zero = pynini.string_file(get_abs_path("data/numbers/zero.tsv"))
         teens_te = pynini.string_file(get_abs_path("data/numbers/teens_and_ties.tsv"))
         teens_en = pynini.string_file(get_abs_path("data/numbers/teens_and_ties_en.tsv"))
-        ties = pynini.string_file(get_abs_path("data/numbers/ties.tsv"))        
-        teens_ties_thousand = pynutil.add_weight(
-            pynini.string_file(get_abs_path("data/numbers/teens_and_ties_thousand.tsv")),
-            -0.2,
-        )
+        ties = pynini.string_file(get_abs_path("data/numbers/ties.tsv"))
 
-        magnitude = {}
-        with open(get_abs_path("data/numbers/magnitudes.tsv"), encoding="utf-8") as magnitude_file:
-            for magnitude_line in magnitude_file:
-                magnitude_line = magnitude_line.rstrip("\r\n")
-                if not magnitude_line:
-                    continue
-                magnitude_key, magnitude_word = magnitude_line.split("\t")
-                magnitude[magnitude_key] = magnitude_word
+        magnitude = {k: v for k, v in load_labels(get_abs_path("data/numbers/magnitudes.tsv"))}
 
         hundred = magnitude["hundred"]
         hundred_prefix = magnitude["hundred_prefix"] + " "
@@ -80,15 +67,29 @@ class CardinalFst(GraphFst):
         ins_crore_spaced = pynutil.insert(" " + crore)
         ins_crores_plural = pynutil.insert(" " + magnitude["crores_plural"])
         ins_crores_before = pynutil.insert(" " + magnitude["crores_before"])
-        
+
+        te_digit = pynini.difference(NEMO_ALL_DIGIT, NEMO_DIGIT).optimize()
         digit_en = (NEMO_DIGIT @ digit).optimize()
-        digit_te = (NEMO_TE_DIGIT @ digit).optimize()
+        digit_te = (te_digit @ digit).optimize()
         ties_en = (NEMO_DIGIT @ ties).optimize()
-        ties_te = (NEMO_TE_DIGIT @ ties).optimize()
+        ties_te = (te_digit @ ties).optimize()
+
+        one_digit = pynini.union("1", "౧")
+        digit_except_one = (pynini.difference(NEMO_ALL_DIGIT, NEMO_ALL_ZERO | one_digit) @ digit).optimize()
+        digit_except_one_en = (pynini.difference(NEMO_DIGIT, pynini.union("0", "1")) @ digit).optimize()
+        digit_except_one_te = (pynini.difference(te_digit, pynini.union("౦", "౧")) @ digit).optimize()
 
         teens_ties_en = teens_en | (ties_en + pynutil.delete("0")) | (ties_en + insert_space + digit_en)
         teens_ties_te = teens_te | (ties_te + pynutil.delete("౦")) | (ties_te + insert_space + digit_te)
         teens_ties = pynini.union(teens_ties_te, teens_ties_en)
+        teens_ties_thousand = (
+            (ties_en + pynini.cross("1", " " + magnitude["one"]))
+            | (ties_te + pynini.cross("౧", " " + magnitude["one"]))
+        ).optimize()
+        teens_ties_except_one = pynini.union(
+            teens_en | (ties_en + pynutil.delete("0")) | (ties_en + insert_space + digit_except_one_en),
+            teens_te | (ties_te + pynutil.delete("౦")) | (ties_te + insert_space + digit_except_one_te),
+        ).optimize()
 
         single_digit_graph = digit | zero
         self.single_digits_graph = single_digit_graph + pynini.closure(insert_space + single_digit_graph)
@@ -119,9 +120,6 @@ class CardinalFst(GraphFst):
                 graph = rung if graph is None else graph | rung
             return graph
 
-        one_digit = pynini.union("1", "౧")
-        digit_except_one = (pynini.difference(NEMO_ALL_DIGIT, NEMO_ALL_ZERO | one_digit) @ digit).optimize()
-
         one_prefix = pynutil.delete(one_digit)
 
         graph_hundreds = pynini.cross("100", hundred) | pynini.cross("౧౦౦", hundred)
@@ -149,7 +147,7 @@ class CardinalFst(GraphFst):
             teens_ties_thousand, ins_thousands_before, thousand_ladder, head_suffix=ins_thousand_spaced, head_zeros=3
         )
         graph_ten_thousands |= build_group(
-            teens_ties, ins_thousands_before, thousand_ladder, head_suffix=ins_thousands_plural, head_zeros=3
+            teens_ties_except_one, ins_thousands_before, thousand_ladder, head_suffix=ins_thousands_plural, head_zeros=3
         )
         graph_ten_thousands = graph_ten_thousands.optimize()
 
@@ -173,7 +171,7 @@ class CardinalFst(GraphFst):
             teens_ties_thousand, ins_lakhs_before, lakh_ladder, head_suffix=ins_lakh_spaced, head_zeros=5
         )
         graph_ten_lakhs |= build_group(
-            teens_ties, ins_lakhs_before, lakh_ladder, head_suffix=ins_lakhs_plural, head_zeros=5
+            teens_ties_except_one, ins_lakhs_before, lakh_ladder, head_suffix=ins_lakhs_plural, head_zeros=5
         )
         graph_ten_lakhs = graph_ten_lakhs.optimize()
 
@@ -198,7 +196,7 @@ class CardinalFst(GraphFst):
             teens_ties_thousand, ins_crore_spaced, crore_ladder, head_suffix=ins_crore_spaced, head_zeros=7
         )
         graph_ten_crores |= build_group(
-            teens_ties, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
+            teens_ties_except_one, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         )
         graph_ten_crores = graph_ten_crores.optimize()
 
@@ -214,7 +212,7 @@ class CardinalFst(GraphFst):
 
         hundred_one_crore_prefix = (
             digit_except_one
-            + pynutil.delete(NEMO_ALL_ZERO | pynini.accep("౦"))
+            + pynutil.delete(NEMO_ALL_ZERO)
             + (pynini.cross("1", hundreds_before_one) | pynini.cross("౧", hundreds_before_one))
         )
 
@@ -247,24 +245,18 @@ class CardinalFst(GraphFst):
                 teens_ties_thousand, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousand_spaced, head_zeros=3
             )
             | build_group(
-                teens_ties, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousands_before, head_zeros=3
+                teens_ties_except_one, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousands_before, head_zeros=3
             )
         ).optimize()
 
         crore_count_prefix = (thousand_crore_prefix | ten_thousand_crore_prefix).optimize()
 
-        graph_ten_arabs = pynutil.add_weight(
-            build_group(
-                crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.1,
+        graph_ten_arabs = build_group(
+            crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
-        graph_kharabs = pynutil.add_weight(
-            build_group(
-                ten_thousand_crore_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.2,
+        graph_kharabs = build_group(
+            ten_thousand_crore_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
         lakh_crore_ladder = [
@@ -284,23 +276,13 @@ class CardinalFst(GraphFst):
 
         ten_lakh_crore_prefix = (
             build_group(teens_ties_thousand, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakh_spaced, head_zeros=5)
-            | build_group(teens_ties, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5)
+            | build_group(teens_ties_except_one, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5)
         ).optimize()
 
         lakh_crore_count_prefix = (lakh_crore_prefix | ten_lakh_crore_prefix).optimize()
 
-        graph_ten_kharabs = pynutil.add_weight(
-            build_group(
-                lakh_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.3,
-        ).optimize()
-
-        graph_nils = pynutil.add_weight(
-            build_group(
-                lakh_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.4,
+        graph_ten_kharabs = build_group(
+            lakh_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
         ten_nil_lakh_remainder_before_kotlu = build_group(
@@ -325,23 +307,17 @@ class CardinalFst(GraphFst):
             | create_larger_number_graph(teens_ties, ins_crores_before, 0, ten_nil_lakh_remainder_before_kotlu)
         ).optimize()
 
-        graph_ten_nils = pynutil.add_weight(
-            build_group(
-                ten_nil_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.5,
+        graph_ten_nils = build_group(
+            ten_nil_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
         padma_crore_count_prefix = (
             build_group(teens_ties_thousand, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
-            | build_group(teens_ties, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
+            | build_group(teens_ties_except_one, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
         ).optimize()
 
-        graph_padmas = pynutil.add_weight(
-            build_group(
-                padma_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.6,
+        graph_padmas = build_group(
+            padma_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
         ten_padma_one_crore_count_prefix = create_graph_suffix(hundred_one_crore_prefix, ins_crore_spaced, 7).optimize()
@@ -351,23 +327,20 @@ class CardinalFst(GraphFst):
             | build_group(hundred_crore_prefix, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
         ).optimize()
 
-        graph_ten_padmas = pynutil.add_weight(
-            build_group(
-                ten_padma_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.7,
+        graph_ten_padmas = build_group(
+            ten_padma_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
         shankh_koti_count_prefix = build_group(
             crore_count_prefix, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7
         ).optimize()
 
-        graph_shankhs = pynutil.add_weight(
-            build_group(
-                shankh_koti_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
-            ),
-            -0.8,
+        graph_shankhs = build_group(
+            shankh_koti_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
+
+        def exact_digits(n, graph):
+            return pynini.compose(NEMO_ALL_DIGIT ** n, graph)
 
         graph_without_leading_zeros = (
             digit
@@ -380,15 +353,16 @@ class CardinalFst(GraphFst):
             | graph_ten_lakhs
             | graph_crores
             | graph_ten_crores
-            | graph_arabs
-            | graph_ten_arabs
-            | graph_kharabs
-            | graph_ten_kharabs
-            | graph_nils
-            | graph_ten_nils
-            | graph_padmas
-            | graph_ten_padmas
-            | graph_shankhs
+            | exact_digits(10, graph_arabs)
+            | exact_digits(11, graph_ten_arabs)
+            | exact_digits(12, graph_kharabs)
+            | exact_digits(13, graph_ten_kharabs)
+            | exact_digits(14, graph_ten_kharabs)
+            | exact_digits(15, graph_ten_nils)
+            | exact_digits(16, graph_padmas)
+            | exact_digits(17, graph_ten_padmas)
+            | exact_digits(18, graph_shankhs)
+            | exact_digits(19, graph_shankhs)
         )
 
         cardinal_with_leading_zeros = pynini.compose(
@@ -401,5 +375,4 @@ class CardinalFst(GraphFst):
 
         self.final_graph = final_graph.optimize()
         final_graph = optional_minus_graph + pynutil.insert("integer: \"") + self.final_graph + pynutil.insert("\"")
-        final_graph = self.add_tokens(final_graph)
-        self.fst = final_graph
+        self.fst = self.add_tokens(final_graph)

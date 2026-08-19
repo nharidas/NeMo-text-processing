@@ -29,11 +29,4 @@ class VerbalizeFst(GraphFst):
     def __init__(self, deterministic: bool = True):
         super().__init__(name="verbalize", kind="verbalize", deterministic=deterministic)
 
-        cardinal = CardinalFst(deterministic=deterministic)
-        cardinal_graph = cardinal.fst
-
-        graph = (
-            cardinal_graph
-        )
-
-        self.fst = graph
+        self.fst = CardinalFst(deterministic=deterministic).fst

@@ -68,19 +68,13 @@ class ClassifyFst(GraphFst):
             self.fst = pynini.Far(far_file, mode="r")["tokenize_and_classify"]
             logging.info(f"ClassifyFst.fst was restored from {far_file}.")
         else:
-            logging.info(f"Creating ClassifyFst grammars.")
+            logging.info("Creating ClassifyFst grammars.")
 
-            cardinal = CardinalFst(deterministic=deterministic)
-            cardinal_graph = cardinal.fst
+            cardinal_graph = CardinalFst(deterministic=deterministic).fst
+            punct_graph = PunctuationFst(deterministic=deterministic).fst
+            word_graph = WordFst(deterministic=deterministic).fst
 
-            punctuation = PunctuationFst(deterministic=deterministic)
-            punct_graph = punctuation.fst
-
-            classify = (
-                pynutil.add_weight(cardinal_graph, 1.1)
-            )
-
-            word_graph = WordFst(punctuation=punctuation, deterministic=deterministic).fst
+            classify = pynutil.add_weight(cardinal_graph, 1.1)
 
             punct = pynutil.insert("tokens { ") + pynutil.add_weight(punct_graph, weight=2.1) + pynutil.insert(" }")
             punct = pynini.closure(
