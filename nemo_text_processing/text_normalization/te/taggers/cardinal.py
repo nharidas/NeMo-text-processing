@@ -24,6 +24,7 @@ from nemo_text_processing.text_normalization.te.graph_utils import (
 )
 from nemo_text_processing.text_normalization.te.utils import get_abs_path, load_labels
 
+
 class CardinalFst(GraphFst):
     """
     Finite state transducer for classifying cardinals, e.g.
@@ -147,7 +148,11 @@ class CardinalFst(GraphFst):
             teens_ties_thousand, ins_thousands_before, thousand_ladder, head_suffix=ins_thousand_spaced, head_zeros=3
         )
         graph_ten_thousands |= build_group(
-            teens_ties_except_one, ins_thousands_before, thousand_ladder, head_suffix=ins_thousands_plural, head_zeros=3
+            teens_ties_except_one,
+            ins_thousands_before,
+            thousand_ladder,
+            head_suffix=ins_thousands_plural,
+            head_zeros=3,
         )
         graph_ten_thousands = graph_ten_thousands.optimize()
 
@@ -235,17 +240,29 @@ class CardinalFst(GraphFst):
             pynini.cross("1000", thousand)
             | pynini.cross("౧౦౦౦", thousand)
             | build_group(
-                digit_except_one, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousands_before, head_zeros=3
+                digit_except_one,
+                ins_thousands_before,
+                thousand_crore_ladder,
+                head_suffix=ins_thousands_before,
+                head_zeros=3,
             )
             | build_group(one_prefix, ins_thousand, thousand_crore_ladder)
         ).optimize()
 
         ten_thousand_crore_prefix = (
             build_group(
-                teens_ties_thousand, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousand_spaced, head_zeros=3
+                teens_ties_thousand,
+                ins_thousands_before,
+                thousand_crore_ladder,
+                head_suffix=ins_thousand_spaced,
+                head_zeros=3,
             )
             | build_group(
-                teens_ties_except_one, ins_thousands_before, thousand_crore_ladder, head_suffix=ins_thousands_before, head_zeros=3
+                teens_ties_except_one,
+                ins_thousands_before,
+                thousand_crore_ladder,
+                head_suffix=ins_thousands_before,
+                head_zeros=3,
             )
         ).optimize()
 
@@ -271,12 +288,18 @@ class CardinalFst(GraphFst):
             pynini.cross("100000", lakh)
             | pynini.cross("౧౦౦౦౦౦", lakh)
             | build_group(one_prefix, ins_lakh, lakh_crore_ladder)
-            | build_group(digit_except_one, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5)
+            | build_group(
+                digit_except_one, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5
+            )
         ).optimize()
 
         ten_lakh_crore_prefix = (
-            build_group(teens_ties_thousand, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakh_spaced, head_zeros=5)
-            | build_group(teens_ties_except_one, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5)
+            build_group(
+                teens_ties_thousand, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakh_spaced, head_zeros=5
+            )
+            | build_group(
+                teens_ties_except_one, ins_lakhs_before, lakh_crore_ladder, head_suffix=ins_lakhs_before, head_zeros=5
+            )
         ).optimize()
 
         lakh_crore_count_prefix = (lakh_crore_prefix | ten_lakh_crore_prefix).optimize()
@@ -313,18 +336,24 @@ class CardinalFst(GraphFst):
 
         padma_crore_count_prefix = (
             build_group(teens_ties_thousand, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
-            | build_group(teens_ties_except_one, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
+            | build_group(
+                teens_ties_except_one, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7
+            )
         ).optimize()
 
         graph_padmas = build_group(
             padma_crore_count_prefix, ins_crores_before, crore_ladder, head_suffix=ins_crores_plural, head_zeros=7
         ).optimize()
 
-        ten_padma_one_crore_count_prefix = create_graph_suffix(hundred_one_crore_prefix, ins_crore_spaced, 7).optimize()
+        ten_padma_one_crore_count_prefix = create_graph_suffix(
+            hundred_one_crore_prefix, ins_crore_spaced, 7
+        ).optimize()
 
         ten_padma_crore_count_prefix = (
             ten_padma_one_crore_count_prefix
-            | build_group(hundred_crore_prefix, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7)
+            | build_group(
+                hundred_crore_prefix, ins_crore_spaced, koti_ladder, head_suffix=ins_crore_spaced, head_zeros=7
+            )
         ).optimize()
 
         graph_ten_padmas = build_group(
@@ -340,7 +369,7 @@ class CardinalFst(GraphFst):
         ).optimize()
 
         def exact_digits(n, graph):
-            return pynini.compose(NEMO_ALL_DIGIT ** n, graph)
+            return pynini.compose(NEMO_ALL_DIGIT**n, graph)
 
         graph_without_leading_zeros = (
             digit
