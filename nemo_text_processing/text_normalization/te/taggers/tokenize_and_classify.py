@@ -89,14 +89,14 @@ class ClassifyFst(GraphFst):
             fraction = FractionFst(cardinal=cardinal, deterministic=deterministic)
             fraction_graph = fraction.fst
 
-            date = DateFst(cardinal=cardinal)
+            ordinal = OrdinalFst(cardinal=cardinal, deterministic=deterministic)
+            ordinal_graph = ordinal.fst
+
+            date = DateFst(cardinal=cardinal, ordinal=ordinal)
             date_graph = date.fst
 
             # timefst = TimeFst(cardinal=cardinal)
             # time_graph = timefst.fst
-
-            ordinal = OrdinalFst(cardinal=cardinal, deterministic=deterministic)
-            ordinal_graph = ordinal.fst
 
             # measure = MeasureFst(cardinal=cardinal, decimal=decimal, ordinal=ordinal, input_case=input_case)
             # measure_graph = measure.fst
@@ -119,10 +119,10 @@ class ClassifyFst(GraphFst):
 
             classify = (
                 # pynutil.add_weight(whitelist_graph, 1.01)| 
-                pynutil.add_weight(cardinal_graph, 1.1)
+                pynutil.add_weight(date_graph, 1.01)
+                | pynutil.add_weight(cardinal_graph, 1.1)
                 | pynutil.add_weight(decimal_graph, 1.1)
                 | pynutil.add_weight(fraction_graph, 1.1)
-                | pynutil.add_weight(date_graph, 1.1)
                 # | pynutil.add_weight(time_graph, 1.1)
                 # | pynutil.add_weight(measure_graph, 1.1)
                 # | pynutil.add_weight(money_graph, 1.1)
