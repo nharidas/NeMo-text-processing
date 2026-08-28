@@ -23,16 +23,20 @@ from pynini import Far
 from pynini.export import export
 from pynini.lib import byte, pynutil, utf8
 
-from nemo_text_processing.text_normalization.te.utils import get_abs_path
+from nemo_text_processing.text_normalization.te.utils import get_abs_path, load_labels
 
 NEMO_CHAR = utf8.VALID_UTF8_CHAR
 NEMO_DIGIT = byte.DIGIT
 
+_digit_labels = load_labels(get_abs_path("data/numbers/digit.tsv"))
+_digit_map = {row[0]: row[1] for row in _digit_labels}
 NEMO_ALL_ZERO = pynini.project(pynini.string_file(get_abs_path("data/numbers/zero.tsv")), "input").optimize()
-NEMO_ALL_DIGIT = pynini.union(
-    pynini.project(pynini.string_file(get_abs_path("data/numbers/digit.tsv")), "input"),
-    NEMO_ALL_ZERO,
-).optimize()
+NEMO_ALL_DIGIT = pynini.union(pynini.union(*_digit_map.keys()), NEMO_ALL_ZERO).optimize()
+_one_verbal = _digit_map["1"]
+NEMO_ONE_DIGIT = pynini.union(*[inp for inp, verbal in _digit_map.items() if verbal == _one_verbal]).optimize()
+
+NEMO_TELUGU_CHAR = pynini.union(*[chr(c) for c in range(0x0C00, 0x0C80)]).optimize()
+NEMO_TELUGU_SIGMA = pynini.closure(NEMO_TELUGU_CHAR | pynini.accep(" ")).optimize()
 
 NEMO_NON_BREAKING_SPACE = u"\u00a0"
 NEMO_SPACE = " "
