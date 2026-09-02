@@ -30,10 +30,6 @@ class OrdinalFst(GraphFst):
     Finite state transducer for classifying Telugu ordinals, e.g.
         21వ -> ordinal { integer: "ఇరవై ఒకటవ" }
 
-    Ordinals reuse cardinal verbalization, then rewrite only the final morpheme:
-        - input exceptions (1వ, 1st-15th) from exceptions.tsv
-        - append-వ endings (round tens, 100) from ordinal_endings.tsv
-        - default: replace final vowel sign with వ from char_rewrites.tsv
     """
 
     def __init__(self, cardinal: CardinalFst, deterministic: bool = True):
