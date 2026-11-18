@@ -52,5 +52,10 @@ testTNFraction() {
   input=$PROJECT_DIR/te/data_text_normalization/test_cases_fraction.txt
   runtest $input
 }
+
+testTNMoney() {
+  input=$PROJECT_DIR/te/data_text_normalization/test_cases_money.txt
+  runtest $input
+}
 # Load shUnit2
 . $PROJECT_DIR/../shunit2/shunit2
