@@ -39,4 +39,5 @@ class DecimalFst(GraphFst):
         )
 
         graph = optional_sign + integer + delete_space + fractional
+        self.numbers = graph
         self.fst = self.delete_tokens(graph).optimize()

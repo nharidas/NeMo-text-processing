@@ -38,4 +38,5 @@ class CardinalFst(GraphFst):
         integer = pynutil.delete("integer:") + pynutil.delete(" \"") + integer + pynutil.delete("\"")
 
         graph = optional_sign + integer
+        self.numbers = graph
         self.fst = self.delete_tokens(graph).optimize()

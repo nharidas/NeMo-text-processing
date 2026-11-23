@@ -57,5 +57,10 @@ testTNMoney() {
   input=$PROJECT_DIR/te/data_text_normalization/test_cases_money.txt
   runtest $input
 }
+
+testTNMeasure() {
+  input=$PROJECT_DIR/te/data_text_normalization/test_cases_measure.txt
+  runtest $input
+}
 # Load shUnit2
 . $PROJECT_DIR/../shunit2/shunit2

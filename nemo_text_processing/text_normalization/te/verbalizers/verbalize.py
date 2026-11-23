@@ -18,6 +18,7 @@ from nemo_text_processing.text_normalization.te.verbalizers.decimal import Decim
 from nemo_text_processing.text_normalization.te.verbalizers.ordinal import OrdinalFst
 from nemo_text_processing.text_normalization.te.verbalizers.fraction import FractionFst
 from nemo_text_processing.text_normalization.te.verbalizers.money import MoneyFst
+from nemo_text_processing.text_normalization.te.verbalizers.measure import MeasureFst
 
 
 class VerbalizeFst(GraphFst):
@@ -49,12 +50,16 @@ class VerbalizeFst(GraphFst):
         money = MoneyFst(deterministic=deterministic)
         money_graph = money.fst
 
+        measure = MeasureFst(cardinal=cardinal, decimal=decimal)
+        measure_graph = measure.fst
+
         graph = (
             cardinal_graph
             | decimal_graph
             | ordinal_graph
             | fraction_graph
             | money_graph
+            | measure_graph
         )
 
         self.fst = graph
